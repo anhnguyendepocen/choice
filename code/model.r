@@ -40,10 +40,49 @@ library(mlogit)
   }
     
 
+  
+## ~~~~~~~~~~~~~~~~
+## Format Dataset to run via specified alternatives (long)
+  
+mnl.data.format <- function(dat=data,
+                            id.variable='pid',
+                            choiceindicator='chosen',
+                            alternatives='alts'){
+  
+  
+  # keep unique by PID
+  dat <- subset(dat, !duplicated(get(id.variable)))
+  row.names(dat)=NULL
+  
+  # rename util vals to make them nice
+  dat$outcome = as.character(dat[,alternatives])
+  
+  # append and duplicate data so have it long by pid-alternate, and identified with chosen
+  # make list of non-selected alternative for each individual
+  alterns = t(matrix(rep(unique(dat$outcome),nrow(dat)),ncol=nrow(dat)))
+  alterns = unique(dat$outcome)
+  
+  
+  dat=dat[order(dat[,id.variable]),][rep(1:nrow(dat),each=length(alterns)),] 
+  dat$alts    = (rep(alterns,nrow(dat)/length(alterns)))
+  dat$chosen  = (dat$outcome==dat$alts)
+  row.names(dat)=NULL
+  
+  return(mlogit.data(dat, choice = choiceindicator,
+                     shape="long", alt.var='alts', id.var=id.variable))
+}  
+  
+  
+  
+  
+  
+  
+  
+  
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## wrap mnl modelling function
-  mnl.model <- function(d=data,
-                        alternatives='facility',
+  mnl.model <- function(d=dat,
+                        alternatives='alts',
                         id.variable='pid',
                         choiceindicator='chosen',
                         coefficients=c('male','age_gr'),
@@ -62,7 +101,7 @@ library(mlogit)
           # data must be formatted to one row per alternative/attribute.. throw error if not the case
           
           # format alternatives as intercept
-          d= make.dummies(var=alternatives,nameto='int',intercept=T,append=T)
+          d= make.dummies(dat=d,var=alternatives,nameto='int',intercept=T,append=T)
           
           # start a list of coefficients
           
@@ -128,11 +167,11 @@ library(mlogit)
     totcoefs<-length(pe)
     
     # how many alternatives were there?
-    altnames<-names(predict(m))
+    altnames<-colnames(m$probabilities)
     alts<-length(altnames)
     
     # what was our reference category?
-    ref <- names(predict(m)[1])
+    ref <- altnames[1]
     
     # how many coefficients do I have per alternative?
     coefs<-totcoefs/(alts-1) # -1 to remove reference which has no coeffs by construction
@@ -145,7 +184,7 @@ library(mlogit)
     simb <- array(NA, dim = c(sims,coefs,alts)) 
     simb[,,1] <- c(rep(0,sims*(coefs)))    # reference 
     for(i in 2:alts){
-      alt<-names(predict(m)[i])
+      alt<-colnames(m$probabilities)[i]
       simb[,,i] <- simbetas[,c(grep(alt,names(data.frame(simbetas))))]           
     }
     
@@ -162,7 +201,8 @@ library(mlogit)
   # by default take the means
   make.hyp.data <- function(modeldata=dd,
                             customhypname=NULL,
-                            customhypval=NULL){
+                            customhypval=NULL,
+                            choiceindicator='chosen'){
     # by default use means
     xhyp<-aggregate(modeldata,FUN=mean,by=list(index(modeldata)$alt))
     xhyp<-xhyp[,!colnames(xhyp)%in%c("Group.1",choiceindicator)] # remove first 2 vars 
@@ -184,6 +224,8 @@ library(mlogit)
       }
     }
     
+    # add intercept
+    xhyp<-cbind(data.frame(int=rep(1,nrow(xhyp))),xhyp)
     return(xhyp)
   }
   
@@ -202,11 +244,13 @@ library(mlogit)
                   upper = array(0, dim = c(1,alts, length(ci))),
                   pe    = array(0, dim = c(1,alts, length(ci))))
       
+      # loop through categories of outcomes to get denominator
       simdenom <- 0
       for (icat in 1:(dim(simb)[3]))  {
-        newdenom <- exp(simb[, , icat] %*% x[1, , icat])
-        simdenom <- simdenom + newdenom
+        newdenom <- exp(simb[, , icat] %*% x[1, , icat]) # exp(Bx)), simb for reference is always 0
+        simdenom <- simdenom + newdenom # sum up all the probs for the denom Sigma(exp(Bx))
       }
+      # simulate the results
       simy <- matrix(NA, nrow = dim(simb)[1], ncol = alts)
       for (icat in 1:dim(x)[3]) {
         simy[, icat] <- exp(simb[, , icat] %*% x[1, , icat])/simdenom
@@ -250,72 +294,17 @@ library(mlogit)
     return(p)
   }
 
-## ~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-## test this all out with Nigeria LSS data
-test=F
-if(test){
-  data<-read.csv("J:/Project/phc/nga/choice/data/1f_fully_prepped.csv")
-  
-  # sample 20% of people so it runs faster!
-  # data<-data[data$pid%in%sample(unique(data$pid),nrow(data)/7*.2),]
-  
-  # make it binary for utilized only
-    # keep one row per pid
-    data = data[data$chosen==1,]
-    row.names(data)=NULL
-    
-    # rename util vals to make them nice
-    data$u='no'; data$u[data$util==1]='yes'
-    
-    # append and duplicate data so have it long by pid-alternate, and identified with chosen
-      # make list of non-selected alternative for each individual
-      alterns = t(matrix(rep(unique(data$u),nrow(data)),ncol=nrow(data)))
-      alterns = unique(data$u)
-        
-      
-      dat=data[order(data$pid),][rep(1:nrow(data),each=2),] 
-      dat$outcome = (rep(alterns,nrow(dat)/length(alterns)))
-      dat$chosen  = (dat$u==dat$outcome)
-      row.names(dat)=NULL
-      
-      dat<-mlogit.data(dat, choice = 'chosen',
-                      shape="long", alt.var='outcome', id.var='pid')
-      
-  
-      
-  # run the model
-  mnl <- mnl.model(d=dat,
-                 alternatives='outcome',
-                 id.variable='pid',
-                 choiceindicator='chosen',
-                 coefficients=c('male','age_gr'),
-                 dummycoeffs=c('max_hh_edu'))
   
   
   
-  # simulate betas from the model object
-  simulatedbetas<- sim.betas(m=mnl$model,sims=1000)
-  
-  # try with low edu young female
-  xhyp <- make.hyp.data(modeldata=mnl$modeldata)
-                        
-  xhyp1 <- make.hyp.data(modeldata=mnl$modeldata,
-                        customhypname=c('male','age_gr','max_hh_edu3','max_hh_edu4','max_hh_edu5'),
-                        customhypval= c(0,0,0,0,1))
 
-  xhyp2 <- make.hyp.data(modeldata=mnl$modeldata,
-                         customhypname=c('male','age_gr','max_hh_edu3','max_hh_edu4','max_hh_edu5'),
-                         customhypval= c(0,0,1,0,0))
+
+
+
+## ~~~~~~~~~~~~ Fully format and run in one function
+
+
   
   
-  # simulate probabilities
-  base <- mlogitsim(x=xhyp)
-  res1 <- mlogitsim(x=xhyp1)  
-  res2 <- mlogitsim(x=xhyp2)  
-  
-  # graph  
-  forestplot(d=list(cbind(data.frame('name'=colnames(res1)),t(res1),id=rep("Female u5 with Edu=3",nrow(t(res1)))),
-                    cbind(data.frame('name'=colnames(res2)),t(res2),id=rep("Female u5 with Edu=5",nrow(t(res2))))
-                    ))
-}
+
 
