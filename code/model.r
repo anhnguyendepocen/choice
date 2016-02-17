@@ -47,7 +47,7 @@ library(mlogit)
 mnl.data.format <- function(dat=data,
                             id.variable='pid',
                             choiceindicator='chosen',
-                            alternatives='alts'){
+                            alternatives='fac_type1'){
   
   
   # keep unique by PID
@@ -277,29 +277,107 @@ mnl.data.format <- function(dat=data,
       if(summary==F) return(simy)
     }
   
+  
+  # function takes two unsummarized mlogitsims and gives summarized first differences
+  firstdiffs<- function(obj1,obj2,ci=0.95,alterns=simulatedbetas$altnames){
+    x<-obj1-obj2
     
+    res <- list(lower = array(0, dim = c(1,length(alterns), length(ci))), 
+                upper = array(0, dim = c(1,length(alterns), length(ci))),
+                pe    = array(0, dim = c(1,length(alterns), length(ci)))) 
+    
+    res$pe <- apply(x, 2, mean)
+    simysorted <- apply(x, 2, sort) 
+    
+    for(alt in 1:length(alterns)){
+      res$lower[1,alt, 1] <- quantile(simysorted[,alt],  probs = (1-ci)/2)
+      res$upper[1,alt, 1] <- quantile(simysorted[,alt],  probs = ci+(1-ci)/2)
+    }  
+    res<-list(
+      lci=round(as.numeric(res$lower),5),
+      mean=round(as.numeric(res$pe),5),
+      uci=round(as.numeric(res$upper),5))
+    res<-do.call(rbind.data.frame, res)
+    # same order as simb
+    colnames(res)<-alterns
+    return(res)
+  }
+  
+  
   
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## plot extracted predictions
   
-  forestplot <- function(d=list(), xlab="Probability of Choosing Utilization Alternative",ylab="Utilized"){
-    d <- do.call("rbind", d) 
+  # forest plot
+  forestplot <- function(d=list(), xlab="Probability of Choosing Utilization Alternative",ylab="Utilized",fdiff=F){
+    d <- data.frame(do.call("rbind", d) )
     require(ggplot2)
     p <- ggplot(d, aes(x=name, y=mean, ymin=lci, ymax=uci,colour=id)) + 
       geom_pointrange(data=subset(d,as.numeric(d$id)==1),size=1.2) +  
-      geom_pointrange(data=subset(d,as.numeric(d$id)==2),size=1.2,aes(x=as.numeric(name)+.2))  +  
       coord_flip() +
-      ylab(xlab) +
-      xlab(ylab) + theme_bw() 
-    return(p)
+      theme_bw() 
+    
+      if(fdiff){
+        p <- p + geom_hline(xintercept = 0,linetype="longdash")+
+        theme(panel.grid.minor.x = element_line(linetype = "solid"))
+        if (xlab=="Probability of Choosing Utilization Alternative")
+          xlab="Difference in Probability of Choosing Utilization Alternative"
+      } else {
+        p<-p+geom_pointrange(data=subset(d,as.numeric(d$id)==2),size=1.2,aes(x=as.numeric(name)+.2)) 
+      }
+      p<-p+
+        theme(axis.title.y = element_text(face="bold",size=20))+
+        theme(axis.text.y  = element_text(face="bold",size=16))+
+        theme(axis.text.x  = element_text(face="bold",size=12))+ 
+        theme(legend.key = element_blank(),legend.title=element_blank(),legend.position="bottom")+
+        theme(panel.border = element_blank())+
+        ylab(xlab) +
+        xlab(ylab) 
+      return(p)
+    }
+  
+
+  
+  # stacked bar
+  
+  
+ 
+  # table grob of results (predicted probs as well as model outputs)
+  library(gridExtra)
+  library(grid)
+  library(xtable)
+  model.results.grob <- function(m=mnl$model,xtable=F){
+    res<-data.frame(round(summary(m)$CoefTable[,c(1:2,4)],3))
+    r <- data.frame(round(exp(res[,1]),3),res[,1],res[,2],res[,3])
+    rownames(r)=rownames(res)
+    if(xtable==F) {
+      colnames(r)=c("e^hat(beta)","hat(beta)","hat(se)","p-value")
+      tt <- ttheme_default(colhead=list(fg_params = list(parse=TRUE)))
+      grid.table(r,theme=tt)
+    }else{ 
+      colnames(r)=c("OR","beta","se","p-value")
+      #xtable(r) 
+      return(r)
+    }
   }
 
+  # predicted probabilities
+  model.pred.grob <- function(r=res1,xtable=F){
+    r=t(round(r,3))
+    if(xtable==F) {
+      tt <- ttheme_default(colhead=list(fg_params = list(parse=TRUE)))
+      grid.table(r,theme=tt)
+    }else{ 
+      #xtable(r) 
+      return(r)
+    }
+  }
   
   
   
-
-
-
+  
+  
+  
 
 ## ~~~~~~~~~~~~ Fully format and run in one function
 

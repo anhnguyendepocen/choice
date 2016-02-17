@@ -1,0 +1,319 @@
+
+\documentclass[12pt]{article}
+\usepackage{nameref}
+\usepackage{fullpage}
+\usepackage{pdfpages}
+\usepackage{pdflscape}
+\usepackage{amssymb,amsmath,amsthm} 
+\usepackage{float} 
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1.25in]{geometry}
+\usepackage{pst-bar,pst-plot,pstricks-add}
+\usepackage{graphicx,ctable,booktabs}
+\usepackage{color}
+\usepackage{listings}
+\usepackage[utf8]{inputenc}
+\usepackage{enumerate}
+\usepackage{url}
+\usepackage{framed}
+\usepackage{longtable}
+\usepackage{graphicx}
+\usepackage{sidecap}
+\makeatletter
+\newenvironment{problem}{\@startsection
+       {section}
+       {1}
+       {-.2em}
+       {-3.5ex plus -1ex minus -.2ex}S
+       {2.3ex plus .2ex}
+       {\pagebreak[3]%forces pagebreak when space is small; use \eject for better results
+       \large\bf\noindent{Problem }
+       }
+       }
+       {%\vspace{1ex}\begin{center} \rule{0.3\linewidth}{.3pt}\end{center}}
+       \begin{center}\large\bf \ldots\ldots\ldots\end{center}}
+\makeatother
+
+\usepackage[utf8]{inputenc}
+\usepackage{fourier} 
+\usepackage{array}
+\usepackage{makecell}
+
+\usepackage{enumitem}
+
+
+\renewcommand\theadalign{cb}
+\renewcommand\theadfont{\bfseries}
+\renewcommand\theadgape{\Gape[4pt]}
+\renewcommand\cellgape{\Gape[4pt]}
+
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+}
+ 
+\setlength\parindent{0pt}
+%\SweaveOpts{concordance=TRUE}
+
+% the following converts \paragraph to act like \subsubsubsection
+\makeatletter
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}%
+            {-2.5ex\@plus -1ex \@minus -.25ex}%
+            {1.25ex \@plus .25ex}%
+            {\normalfont\normalsize\bfseries}}
+\makeatother
+\setcounter{secnumdepth}{4} % how many sectioning levels to assign numbers to
+\setcounter{tocdepth}{4}    % how many sectioning levels to show in ToC
+
+
+
+\begin{document}
+%\SweaveOpts{concordance=TRUE}
+
+
+
+
+
+%%%%%%%%%%% TITLE PAGE %%%%%%%%%%% 
+
+
+\title{Modelling healthcare-seeking behavior in XX countries}
+\author{IHME, University of Washington}
+
+\maketitle
+
+{\color{green}\textbf{\textit{DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT}}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\tableofcontents
+\pagebreak
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Background}
+
+In order to inform an evidence-based discussion on the future of Primary Health Care in BMGF priority geographies, we aim to quantify the healthcare-seeking behavior of individuals in XX countries. In this document, we outline the data and methods used to model behavioral models of healthcare seeking. 
+
+[SECTION TO BE COMPLETED]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Data}
+
+In all cases we used population sample surveys that asked about healthcare seeking behavior. \\
+
+[PLACEHOLDER FOR Table outlining data used.]
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Methods}
+
+We modelled the probability of utilization as well as the the probabilities of utilizing specific types of health facilities/providers using multinomial logistic regression. These models are used to analyze data with categorical outcomes, thus helping answer ``what'', ``which'', ``who'', and ``where'' questions, rather than ``how much'' or ``how many'' questions. For this analysis, we always have a nominal categorical response, whether it be utilization (alternatives: ``yes'' or ``no'') or type of facility (example alternative: ``hospital'', ``PHC'', ``No care''). We can ask which characteristics of individual healthcare consumers help predict certain behaviors. These characteristics can include demographic variables such as age, and gender, as well as socio-economic variables such as years of educational attainment, and diagnostic or symptomatic indicators for common conditions such as diarrhea or fever. The models assume that individuals will tend to choose the alternative which maximizes their utility, given the covariates. We fit each model to actual data on reported individual choices from the datasets.    \\\
+
+The same general model can be used for each dataset and any specification (with a nominal response and a set of covariates), thus to descirbe the model here we use a general notation. An indivual, $i$, is faced with alternatives numbered $1,...j,...M$. Alternative 1 is the  reference alternative, with coefficients assumed to be $0$ for this alternative. Covariates $x_1,...x_k,...x_P$ describe each individual. Parameters are estimated for each combination of non-reference alternative and a covariate, along with an intercept for each non-reference alternative. We can just think of the mean function like any other linear regression where the mean for any  $\boldsymbol{\mu_j}=\text{\textbf{X}}\boldsymbol{\beta_j}$, where again, there are $(M-1)*(P+1)$ coefficients ($\beta$) estimated. Since we are interested in estimating the probability of each alternative $j$ for each individual $i$, we use the inverse-logit function, which ensures we have results which are positive and sum to 1:
+
+$$ Pr(y_i=j|x_i,\boldsymbol{\beta}) = \frac{e^{x_i\beta_j}}{\Sigma_{m=1}^M e^{x_i\beta_m}} $$ 
+This probability equation is generalizable for any number of alternatives. Though this does lead to a large number of coefficients, these can be interpretted somewhat naturally. The exponentiated coefficent for any alternative $m$ gives the incremental odds of choosing category $m$ relative to the reference category, given a unit increase in $x$. To generalize this, we can say that for any counterfactual level of $x_c$, the odds of choosing alternative $m$ over alternative $n$ would be $e^{x_c*(\beta_m-\beta_n)}$. \\\
+
+The most straighforward and intuitive way to interpret results from these models is to compare the predicted probabilities that arise from two counterfactual sets of covariates. For example, we could look at the difference in probability of utilization between a 10 year old girl with pneumonia compared to a 1 year old with diarrhea. Likewise, one may be interested in isolating the effect of say, years of education. To do this, we can hold all variables constant (typically at their mean level) and vary only education to see how the predicted probabilities change. In order to estimate uncertainty and thus test for significance among predicted probabilities of two hypotheticals, we simulate 1000 draws from the variance-covariance matrix, reporting the mean and 95\% upper and lower confidence bounds.  \\\
+
+There are some limitations to this approach to keep in mind. First, we make the assumption of Independence of Irrelevant Alternatives (IIA). IIA essentially says that the shift between two alternatives, $m$ and $n$ is irrelevant from otheralternatives. In other words, for this analysis we do not make any account for alternatives that may be close substitutes. This assumption can be relaxed with probit models and random-parameter models but we were limited by issues with generalizability, and computation feasibility over many alternatives. Second, due to lack of reliable data across geography, we do not include alternative-specific covariates.  \\\
+
+
+All analysis was done in \textit{R}, the full reproduction code for this analysis can be found at \url{https://github.com/royburst/choice}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\pagebreak
+\section{Results}
+
+In this section we present results from each dataset. We present model outputs and predicted probabilities for hypothetical sets of covariates. We model a binary utilization response as well as a multinomial facility choice response using data from each survey. Along with demographic variables, individual-level coviariates used in each model were selected on the basis of their mutability overe time. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Nigeria}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{2008-10 Harmonized Nigeria Living Standards Survey (HNLSS)}
+
+<<lsssetup,include=F>>=
+rm(list=ls())
+source('../model.r')
+
+data<-read.csv("J:/Project/phc/nga/choice/data/1f_fully_prepped.csv")
+@
+
+<<lsssetup2,include=F>>=
+  # format the data long by my chosen alt variable
+
+  #coef list
+  coefs=c('male'='0/1 is repondent male',
+          'age_gr'='5 year age bins',
+          'max_hh_yedu' = 'max years of education, any HH member (range 0 to 18)',
+          'ill_chronic' = '0/1 was respondent ill with a chronic illness',
+          'ill_malaria' = '0/1 was respondent ill with malaria', 
+          'ill_headache' = '0/1 was respondent ill with a headache',
+          'ill_diarrhea' = '0/1 was respondent ill with diarrhea', 
+          'ill_cough' = '0/1 was respondent ill with a cough',
+          'reg_activities_stopped' = '0/1 was respondent so ill that regular activities stopped' )
+  
+  clist=names(coefs)
+  
+  # run the models (util and facil)
+  
+  data$u='yes';data$u[data$util==0]='no'
+  dat=mnl.data.format(dat=data,
+                      id.variable='pid',
+                      choiceindicator='chosen',
+                      alternatives='u')
+  mnlu <- mnl.model(d=dat,
+                   alternatives='alts',
+                   id.variable='pid',
+                   choiceindicator='chosen',
+                   coefficients=clist,
+                   dummycoeffs=NULL)
+  dat=mnl.data.format(dat=data,
+                      id.variable='pid',
+                      choiceindicator='chosen',
+                      alternatives='fac_type1')
+  mnlf <- mnl.model(d=dat,
+                   alternatives='alts',
+                   id.variable='pid',
+                   choiceindicator='chosen',
+                   coefficients=clist,
+                   dummycoeffs=NULL)
+  
+   
+  
+  # simulate betas from the model object
+  simulatedbetasu<- sim.betas(m=mnlu$model,sims=1000)
+  simulatedbetasf<- sim.betas(m=mnlf$model,sims=1000)
+
+  
+  @
+  
+  
+For this survey, we ran two models. First, with a binary indicator for utilization \texttt{(Alternatives: \Sexpr{unique(data$u)}. Reference: \Sexpr{simulatedbetasu$ref})}, and with a mutinomial indicator for health facility choice \texttt{(Alternatives: \Sexpr{unique(data$facility)}. Reference: \Sexpr{simulatedbetasf$ref})}. \\\
+
+
+For both models we included the following covariates: \\
+<<lss_model_covariates, echo=FALSE, warning=FALSE, results='asis'>>=
+library(xtable)
+ctable <-data.frame(description=coefs)
+print(xtable(ctable,table.placement="H", 
+             caption="Covariate names and descriptions.",
+             label='ccccc'),include.rownames=T , tabular.environment = 'longtable')
+@
+
+
+Below are the estimated coefficients for each model, recall you will see many because we have a coefficient for each covariate-alternative (non-reference) combination. They are identified in the format \textit{alternative}:\textit{covariate}: \\\
+
+<<lss_model_results, echo=FALSE, warning=FALSE, results='asis'>>=
+  
+print(xtable(model.results.grob(m=mnlu$model,xtable=T),
+             caption='\\textit{Estimated Coefficients for Nigeria LSS model with Binary Utilization Outcome}',
+             label="lsscoefu"),table.placement="H", include.rownames=T)
+  
+print(xtable(model.results.grob(m=mnlf$model,xtable=T),
+             caption='\\textit{Estimated Coefficients for Nigeria LSS model with Multinomial Facility Choice Outcome}',
+             label="lsscoeff"),table.placement="H", include.rownames=T , tabular.environment = 'longtable')
+
+
+@
+  
+  
+To more easily interpret these findings we can assume hypothetical covariate values (also known as counterfactuals), and predict the alternative-specific probabilities under these values. For example, an individual we can qualititatively describe as a newborn male child with diarrhea from a household with low educational attainment would be represented by the following hypothetical data:
+
+<<lss_hyp, echo=FALSE, warning=FALSE, results='asis'>>=
+xhyp1 <- make.hyp.data(modeldata=mnlu$modeldata,
+                         customhypname=clist,
+                         customhypval= c(1,0,3,0,0,0,1,0,0))
+res<-data.frame(variable=colnames(xhyp1),value=c(t(xhyp1[1,])))
+
+print(xtable(res,
+             caption='\\textit{Motivating example for counterfactual analysis. Hypothetical data.}',
+             label="hypdat"),table.placement="H", include.rownames=F)
+
+
+@
+
+We can simulate from the estimated coefficients and their covariances to generate fitted probabilities for this example person, yielding the following results:
+
+<<res, echo=FALSE, warning=FALSE, results='asis'>>=
+
+resu <- mlogitsim(x=xhyp1,b=simulatedbetasu)
+resf <- mlogitsim(x=xhyp1,b=simulatedbetasf)  
+
+
+    
+print(xtable(model.pred.grob(resu,xtable=T),
+             caption='\\textit{Simulated probabilities for hypothetical individual. Utilization only model.}'),
+             table.placement="H", include.rownames=T)           
+print(xtable(model.pred.grob(resf,xtable=T),
+             caption='\\textit{Simulated probabilities for hypothetical individual. Facility Choice model.}'),
+             table.placement="H", include.rownames=T)           
+  
+  
+@
+
+
+We may find it interesting to compare two hypotheticals. Consider for example we where interested in how the utilization pattern would change for this child if, all else held equal, they were from a household with 10 years more education. Here is what our two hypothetical datasets would look like:
+
+  
+<<lss_hyp2, echo=FALSE, warning=FALSE, results='asis'>>=
+xhyp2 <- make.hyp.data(modeldata=mnlu$modeldata,
+                         customhypname=clist,
+                         customhypval= c(1,0,13,0,0,0,1,0,0))
+
+res<-data.frame(variable=colnames(xhyp1),hyp1.value=c(t(xhyp1[1,])),hyp2.value=c(t(xhyp2[1,])))
+
+print(xtable(res,
+             caption='\\Hypothetical data for low and high educational attainment households.}',
+             label="hypdat"),table.placement="H", include.rownames=F)
+
+@
+
+We can simulate the draw-level differences (hyp2-hyp1) and look at the changing utilization pattern:
+
+
+<<lss_hyp2212, echo=FALSE, warning=FALSE, results='asis'>>=
+resf1   <- mlogitsim(x=xhyp1,b=simulatedbetasf)['mean',]  
+resf2   <- mlogitsim(x=xhyp2,b=simulatedbetasf)['mean',]   
+difference <- firstdiffs(mlogitsim(x=xhyp2,b=simulatedbetasf,summary=F)  ,
+                         mlogitsim(x=xhyp1,b=simulatedbetasf,summary=F)  ,
+                         ci=0.95,alterns=simulatedbetasf$altnames)
+res=rbind(resf1,resf2,difference)
+row.names(res)<-c("hyp1_mean","hyp2_mean",'diff_lci','diff_mean','diff_uci')
+  
+print(xtable(t(res),
+             caption='\\Hypothetical data for low and high educational attainment households.}',
+             label="hypdat"),table.placement="H", include.rownames=F)
+
+@
+
+It may be easier to take in these differences in probability visually:
+
+<<sasds, echo=FALSE, warning=FALSE, results='asis'>>=
+  forestplot(d=list(cbind(data.frame('name'=colnames(difference)),t(difference),id=rep("Difference",nrow(t(difference))))), 
+             xlab="Change Probability of Choice With 10 years more edu",
+             ylab="Alternative",
+             fdiff=T)
+
+
+@
+
+
+\pagebreak
+
+
+
+
+
+
+
+\end{document}
+
+
+

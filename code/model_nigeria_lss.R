@@ -18,7 +18,7 @@ source('./code/model.r')
   dat=mnl.data.format(dat=data,
                       id.variable='pid',
                       choiceindicator='chosen',
-                      alternatives='util')
+                      alternatives='facility')
   
   #coef list
   clist=c('male','age_gr','max_hh_yedu','ill_chronic' ,'ill_malaria', 'ill_headache' ,'ill_diarrhea', 'ill_cough','reg_activities_stopped' )
@@ -46,23 +46,38 @@ source('./code/model.r')
   
   xhyp2 <- make.hyp.data(modeldata=mnl$modeldata,
                          customhypname=clist,
-                         customhypval= c(0,0,33,0,0,0,0,0,0))
+                         customhypval= c(1,10,3,0,0,0,0,0,1))
   
   
   # simulate probabilities
   base <- mlogitsim(x=xhyp)
   res1 <- mlogitsim(x=xhyp1)  
   res2 <- mlogitsim(x=xhyp2)  
+  #simulate first differences
+  fd<-firstdiffs(mlogitsim(x=xhyp2,summary=F),mlogitsim(x=xhyp1,summary=F))
   
   
+  ##~~~~~~~~~~~
+  # graphs
   
-  # graph  
+  # compare
   forestplot(d=list(cbind(data.frame('name'=colnames(res1)),t(res1),id=rep("xhyp1",nrow(t(res1)))),
                     cbind(data.frame('name'=colnames(res2)),t(res2),id=rep("xhyp2",nrow(t(res2))))
   ))
 
   
+  # first differences
+  forestplot(d=list(cbind(data.frame('name'=colnames(fd)),t(fd),id=rep("First Diff",nrow(t(fd))))),fdiff=T)
   
-  ## ADD GRAPHIC AND TABULAR OUTPUTS!!
+  # table grob
   
+  
+  
+  
+  
+  
+  
+  
+  
+
   
