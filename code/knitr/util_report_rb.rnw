@@ -80,39 +80,37 @@
 %%%%%%%%%%% TITLE PAGE %%%%%%%%%%% 
 
 
-\title{Modelling healthcare-seeking behavior in XX countries}
+\title{Modelling healthcare-seeking behavior in 4 countries}
 \author{IHME, University of Washington}
 
 \maketitle
 
-{\color{green}\textbf{\textit{DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT}}}
+{\color{green}\textbf{\textit{DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT }}}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \tableofcontents
-\pagebreak
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Background}
 
-In order to inform an evidence-based discussion on the future of Primary Health Care in BMGF priority geographies, we aim to quantify the healthcare-seeking behavior of individuals in XX countries. In this document, we outline the data and methods used to model behavioral models of healthcare seeking. 
-
-[SECTION TO BE COMPLETED]
+In order to inform an evidence-based discussion on the future of Primary Health Care in BMGF priority geographies, we aim to quantify the healthcare-seeking behavior of individuals in Ethiopia, India, Kenya, and Nigeria. In this document, we outline the data and methods used to model behavioral models of healthcare seeking. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Data}
 
-In all cases we used population sample surveys that asked about healthcare seeking behavior. \\
+We searched for population surveys which have taken place in within the past 10 years in our 4 countries of interest which asked respondents about healthcare utilization, and which we had access to individual unit-level data. The table on the following page summarizes the datasets: \\
 
-[PLACEHOLDER FOR Table outlining data used.]
+
+\includepdf[pages={1}]{ds.pdf}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Methods}
 
-We modelled the probability of utilization as well as the the probabilities of utilizing specific types of health facilities/providers using multinomial logistic regression. These models are used to analyze data with categorical outcomes, thus helping answer ``what'', ``which'', ``who'', and ``where'' questions, rather than ``how much'' or ``how many'' questions. For this analysis, we always have a nominal categorical response, whether it be utilization (alternatives: ``yes'' or ``no'') or type of facility (example alternative: ``hospital'', ``PHC'', ``No care''). We can ask which characteristics of individual healthcare consumers help predict certain behaviors. These characteristics can include demographic variables such as age, and gender, as well as socio-economic variables such as years of educational attainment, and diagnostic or symptomatic indicators for common conditions such as diarrhea or fever. The models assume that individuals will tend to choose the alternative which maximizes their utility, given the covariates. We fit each model to actual data on reported individual choices from the datasets.    \\\
+We modelled the probability of utilization as well as the the probabilities of utilizing specific types of health facilities/providers using multinomial logistic regression. These models are used to analyze data with categorical outcomes, thus helping answer ``what'', ``which'', ``who'', and ``where'' questions, rather than ``how much'' or ``how many'' questions. For this analysis, we always have a nominal categorical response, whether it be utilization (alternatives: ``yes'' or ``no'') or type of facility (example alternative: ``hospital'', ``PHC'', ``No care''). As such, logistic regression for binomial outcomes is simply a specific case of this model. We can ask which characteristics of individual healthcare consumers help predict certain behaviors. These characteristics can include demographic variables such as age, and gender, as well as socio-economic variables such as years of educational attainment, and diagnostic or symptomatic indicators for common conditions such as diarrhea or fever. The models assume that individuals will tend to choose the alternative which maximizes their utility, given the covariates. We fit each model to actual data on reported individual choices from the datasets.    \\\
 
 The same general model can be used for each dataset and any specification (with a nominal response and a set of covariates), thus to descirbe the model here we use a general notation. An indivual, $i$, is faced with alternatives numbered $1,...j,...M$. Alternative 1 is the  reference alternative, with coefficients assumed to be $0$ for this alternative. Covariates $x_1,...x_k,...x_P$ describe each individual. Parameters are estimated for each combination of non-reference alternative and a covariate, along with an intercept for each non-reference alternative. We can just think of the mean function like any other linear regression where the mean for any  $\boldsymbol{\mu_j}=\text{\textbf{X}}\boldsymbol{\beta_j}$, where again, there are $(M-1)*(P+1)$ coefficients ($\beta$) estimated. Since we are interested in estimating the probability of each alternative $j$ for each individual $i$, we use the inverse-logit function, which ensures we have results which are positive and sum to 1:
 
@@ -139,28 +137,49 @@ In this section we present results from each dataset. We present model outputs a
 \subsubsection{2008-10 Harmonized Nigeria Living Standards Survey (HNLSS)}
 
 <<lsssetup,include=F>>=
+# setwd('code/knitr')
 rm(list=ls())
 source('../model.r')
 
 data<-read.csv("J:/Project/phc/nga/choice/data/1f_fully_prepped.csv")
+
+# condition on illness. Otherwise its a weird and biased mix of utilizers (but no info on non-utilizers that arent sick but for instance missed  preventative visit)
+data<-data[data$sick_injured==1,]
 @
 
 <<lsssetup2,include=F>>=
   # format the data long by my chosen alt variable
 
   #coef list
-  coefs=c('male'='0/1 is repondent male',
-          'age_gr'='5 year age bins',
-          'max_hh_yedu' = 'max years of education, any HH member (range 0 to 18)',
-          'ill_chronic' = '0/1 was respondent ill with a chronic illness',
-          'ill_malaria' = '0/1 was respondent ill with malaria', 
-          'ill_headache' = '0/1 was respondent ill with a headache',
-          'ill_diarrhea' = '0/1 was respondent ill with diarrhea', 
-          'ill_cough' = '0/1 was respondent ill with a cough',
-          'reg_activities_stopped' = '0/1 was respondent so ill that regular activities stopped' )
+  coefs=c('male'                   = '0/1 is repondent male',
+          'age'                    = 'Age in years',
+          #'age2'                   = 'Square of age in years',
+          'urban'                  = '0/1 does the person live in an urban area',
+          'hh_size'                = 'Number of HH members',
+          'max_hh_yedu'            = 'max years of education, any HH member (range 0 to 18)',
+          'asset_indexquantile'    = '1-5 which quintile of asset ownership does the HH fall under.',
+          'ill_chronic'            = '0/1 was respondent ill with a chronic illness',
+          'ill_malaria'            = '0/1 was respondent ill with malaria', 
+          'ill_headache'           = '0/1 was respondent ill with a headache',
+          'ill_diarrhea'           = '0/1 was respondent ill with diarrhea', 
+          'ill_cough'              = '0/1 was respondent ill with a cough',
+          'reg_activities_stopped' = '0/1 was respondent so ill that regular activities stopped',
+          'hc_60m'                 = '0/1 is there a clinic or hosp within an hour from respondents home')
+          #'hosp_60m'               = '0/1 is there a hospital within an hour from respondents home')
   
   clist=names(coefs)
   
+  # binary clinic and hosp
+  data$clinic_60m = !data$time_to_health%in%c("180+","60-179 mins")
+  data$clinic_60m[data$time_to_health%in%c("")]=NA
+  data$hosp_60m = !data$time_to_hosp%in%c("180+","60-179 mins")
+  data$hosp_60m[data$time_to_hosp%in%c("")]=NA
+  data$hc_60m=data$hosp_60m*data$clinic_60m
+  
+  # make asset quintile binary
+  dummyvars=c('asset_indexquantile')
+  clist = clist[!clist%in%dummyvars]
+  clist<-c(clist,'asset_index2', 'asset_index3', 'asset_index4', 'asset_index5')
   # run the models (util and facil)
   
   data$u='yes';data$u[data$util==0]='no'
@@ -169,11 +188,11 @@ data<-read.csv("J:/Project/phc/nga/choice/data/1f_fully_prepped.csv")
                       choiceindicator='chosen',
                       alternatives='u')
   mnlu <- mnl.model(d=dat,
-                   alternatives='alts',
-                   id.variable='pid',
-                   choiceindicator='chosen',
-                   coefficients=clist,
-                   dummycoeffs=NULL)
+                     alternatives='alts',
+                     id.variable='pid',
+                     choiceindicator='chosen',
+                     coefficients=clist,
+                     dummycoeffs=NULL)
   dat=mnl.data.format(dat=data,
                       id.variable='pid',
                       choiceindicator='chosen',
@@ -191,14 +210,21 @@ data<-read.csv("J:/Project/phc/nga/choice/data/1f_fully_prepped.csv")
   simulatedbetasu<- sim.betas(m=mnlu$model,sims=1000)
   simulatedbetasf<- sim.betas(m=mnlf$model,sims=1000)
 
-  
+  # unduplicated to work with
+  undup <- data[!duplicated(data$pid),]
   @
   
   
+ 
+%##########################################################################  
+  \paragraph{Data description}
+  
+The dataset has \textbf{\Sexpr{nrow(undup)}} complete observations of individuals who reported illness in the past 2 weeks. 
+  
 For this survey, we ran two models. First, with a binary indicator for utilization \texttt{(Alternatives: \Sexpr{unique(data$u)}. Reference: \Sexpr{simulatedbetasu$ref})}, and with a mutinomial indicator for health facility choice \texttt{(Alternatives: \Sexpr{unique(data$facility)}. Reference: \Sexpr{simulatedbetasf$ref})}. \\\
 
-
 For both models we included the following covariates: \\
+
 <<lss_model_covariates, echo=FALSE, warning=FALSE, results='asis'>>=
 library(xtable)
 ctable <-data.frame(description=coefs)
@@ -208,7 +234,87 @@ print(xtable(ctable,table.placement="H",
 @
 
 
-Below are the estimated coefficients for each model, recall you will see many because we have a coefficient for each covariate-alternative (non-reference) combination. They are identified in the format \textit{alternative}:\textit{covariate}: \\\
+
+The summary statistics for the covariates, among those who responded to being ill (ie conditional on need) in the past 2 weeks:
+
+
+<<lss_model_covariates_summstats, echo=FALSE, warning=FALSE, results='asis'>>=
+
+res= t(as.matrix(rep(NA,6)))
+for(n in row.names(ctable)){
+  m<-t(as.matrix(t(summary(undup[,n]))[,1:6]))
+  row.names(m)<-n
+  res<-rbind(res,m)
+}
+res<-res[-1,]
+res<-data.frame(res)
+res$Mean<-round(res$Mean,2)
+colnames(res)<-c('min','_25pct','_50pct','mean','_75pct','max')
+
+print(xtable(res,table.placement="H", 
+             caption="Summary statistics for the covariates used in the model. Minimum, 25,50,75 percentiles, mean, and max are included.",
+             label='sumstat'),include.rownames=T , tabular.environment = 'longtable')
+@
+
+
+For our two outcomes, utilization and facility type, we observed the following distributions (relative frequencies) of responses:
+
+
+<<lss_model_covariates_summstatsoutcomes, echo=FALSE, warning=FALSE, results='asis'>>=
+
+res<-as.matrix(paste0(round(table(undup$u)/sum(table(undup$u))*100,2),'%'))
+rownames(res)<-simulatedbetasu$altnames
+colnames(res)<-"Relative Frequencies"
+
+
+res2<-as.matrix(paste0(round(table(undup$fac_type1)/sum(table(undup$fac_type1))*100,2),'%'))
+rownames(res2)<-simulatedbetasf$altnames
+colnames(res2)<-"Relative Frequencies"
+
+
+print(xtable(res,table.placement="H", 
+             caption="Distribution of Utilization outcome",
+             label='sumstatu'),include.rownames=T , tabular.environment = 'longtable')
+
+print(xtable(res2,table.placement="H", 
+             caption="Distribution of Facility choice outcome.",
+             label='sumstatf'),include.rownames=T , tabular.environment = 'longtable')
+
+
+@
+
+
+We can start to get an idea of the relationships between some of these covariates and utilization by simple cross-tabulation.
+
+<<XTAB, echo=FALSE, warning=FALSE, results='asis'>>=
+
+res= t(as.matrix(rep(NA,2)))
+for(n in row.names(ctable)){
+  m<-t(as.matrix(t(summary(undup[,n][undup$u=="yes"]))[,'Mean']))
+  m2<-t(as.matrix(t(summary(undup[,n][undup$u=="no"]))[,'Mean']))
+  row.names(m)<-n
+  m<-cbind(m,m2)
+  res<-rbind(res,m)
+}
+res<-res[-1,]
+res<-data.frame(res)
+res<-round(res,2)
+colnames(res)<-c("Mean (Utilized)","Mean (Did not Util.)")
+
+print(xtable(res,table.placement="H", 
+             caption="Mean values of covariates for responded who were ill and did / did not utilize healthcare.",
+             label='sumfdgstat'),include.rownames=T , tabular.environment = 'longtable')
+@
+
+
+In the following section we test these relationships formally using (binary and multinomial) logistic regression models.
+
+
+%##########################################################################  
+  \paragraph{Regression models}
+  
+  
+Below are the estimated coefficients for each model, recall you will see many for the multinomial logit model because we have a coefficient for each covariate-alternative (non-reference) combination. They are identified in the format \textit{alternative}:\textit{covariate}: \\\
 
 <<lss_model_results, echo=FALSE, warning=FALSE, results='asis'>>=
   
@@ -224,12 +330,33 @@ print(xtable(model.results.grob(m=mnlf$model,xtable=T),
 @
   
   
-To more easily interpret these findings we can assume hypothetical covariate values (also known as counterfactuals), and predict the alternative-specific probabilities under these values. For example, an individual we can qualititatively describe as a newborn male child with diarrhea from a household with low educational attainment would be represented by the following hypothetical data:
+  
+  
+%##########################################################################  
+  \paragraph{Interpretting models through counterfactual analysis}
+  
+  
+To more easily interpret these findings we can assume hypothetical covariate values (also known as counterfactuals), and predict the alternative-specific probabilities under these values. We will begin by looking at the binary logistic case. Often it is interesting to look at the predicted probabilities under the mean values of each covariates. Hence we get the following covariate values:
+
+<<lss_hypm, echo=FALSE, warning=FALSE, results='asis'>>=
+base <- make.hyp.data(modeldata=mnlu$modeldata)
+res<-data.frame(variable=colnames(base),value=c(t(base[1,])))
+
+print(xtable(res,
+             caption='\\textit{Motivating example for counterfactual analysis. Hypothetical data.}',
+             label="hypdat"),table.placement="H", include.rownames=F)
+
+
+@
+
+Many of these values end up being impractical because they do not represent true values in our data. This ``mean case'' is often not informative for us, and what we are more interested in is predicting the utilization patterns of certain individuals who fit profiles of interest. For example, an individual we can qualititatively describe as a newborn male child with diarrhea from a household with low educational attainment would be represented by the following hypothetical data:
 
 <<lss_hyp, echo=FALSE, warning=FALSE, results='asis'>>=
 xhyp1 <- make.hyp.data(modeldata=mnlu$modeldata,
-                         customhypname=clist,
-                         customhypval= c(1,0,3,0,0,0,1,0,0))
+                         customhypname=c("male","age","urban","max_hh_yedu","ill_chronic","ill_malaria",
+                                         "ill_headache","ill_diarrhea","ill_cough","reg_activities_stopped",
+                                         "asset_index2","asset_index3","asset_index4","asset_index5"),
+                         customhypval= c(1,0,0,3,0,0,0,1,0,0,0,0,0,0))
 res<-data.frame(variable=colnames(xhyp1),value=c(t(xhyp1[1,])))
 
 print(xtable(res,
@@ -239,7 +366,7 @@ print(xtable(res,
 
 @
 
-We can simulate from the estimated coefficients and their covariances to generate fitted probabilities for this example person, yielding the following results:
+We can simulate from the estimated coefficients and their covariances to generate fitted probabilities for this example person. In this case we are interested in probability of utilization. See observe the following results:
 
 <<res, echo=FALSE, warning=FALSE, results='asis'>>=
 
@@ -251,21 +378,25 @@ resf <- mlogitsim(x=xhyp1,b=simulatedbetasf)
 print(xtable(model.pred.grob(resu,xtable=T),
              caption='\\textit{Simulated probabilities for hypothetical individual. Utilization only model.}'),
              table.placement="H", include.rownames=T)           
-print(xtable(model.pred.grob(resf,xtable=T),
-             caption='\\textit{Simulated probabilities for hypothetical individual. Facility Choice model.}'),
-             table.placement="H", include.rownames=T)           
+#print(xtable(model.pred.grob(resf,xtable=T),
+#             caption='\\textit{Simulated probabilities for hypothetical individual. Facility Choice model.}'),
+#             table.placement="H", include.rownames=T)           
   
   
 @
 
+In this case, we find it highly likely that this person will utilize some sort of healthcare, with a mean predicted probability of \textbf{\Sexpr{resu['mean','yes']}}. \\\
 
-We may find it interesting to compare two hypotheticals. Consider for example we where interested in how the utilization pattern would change for this child if, all else held equal, they were from a household with 10 years more education. Here is what our two hypothetical datasets would look like:
+
+By changing certain values and holding the rest constant, we can begin to understand the effects of certain variables on utilization. Thus, we may find it interesting to compare two hypotheticals. Consider for example we were interested in how the utilization pattern would change for this child if, all else held equal, they were from a household with 10 years more education, and from a household in the highest asset index. Here is what our two hypothetical datasets would look like:
 
   
 <<lss_hyp2, echo=FALSE, warning=FALSE, results='asis'>>=
 xhyp2 <- make.hyp.data(modeldata=mnlu$modeldata,
-                         customhypname=clist,
-                         customhypval= c(1,0,13,0,0,0,1,0,0))
+                         customhypname=c("male","age","urban","max_hh_yedu","ill_chronic","ill_malaria",
+                                         "ill_headache","ill_diarrhea","ill_cough","reg_activities_stopped",
+                                         "asset_index2","asset_index3","asset_index4","asset_index5"),
+                         customhypval= c(1,0,0,13,0,0,0,1,0,0,0,0,0,1))
 
 res<-data.frame(variable=colnames(xhyp1),hyp1.value=c(t(xhyp1[1,])),hyp2.value=c(t(xhyp2[1,])))
 
@@ -277,8 +408,28 @@ print(xtable(res,
 
 We can simulate the draw-level differences (hyp2-hyp1) and look at the changing utilization pattern:
 
-
 <<lss_hyp2212, echo=FALSE, warning=FALSE, results='asis'>>=
+resf1   <- mlogitsim(x=xhyp1,b=simulatedbetasu)['mean',]  
+resf2   <- mlogitsim(x=xhyp2,b=simulatedbetasu)['mean',]   
+difference <- firstdiffs(mlogitsim(x=xhyp2,b=simulatedbetasu,summary=F)  ,
+                         mlogitsim(x=xhyp1,b=simulatedbetasu,summary=F)  ,
+                         ci=0.95,alterns=simulatedbetasu$altnames)
+res=rbind(resf1,resf2,difference)
+row.names(res)<-c("hyp1_mean","hyp2_mean",'diff_lci','diff_mean','diff_uci')
+
+print(xtable(t(res),
+             caption='\\Hypothetical data for low and high educational attainment households.}',
+             label="hypdat"),table.placement="H", include.rownames=F)
+
+@
+
+As you can see, the child with higher SES indicators (education and asset index) was estimated to be \textbf{\Sexpr{round(res["diff_mean","yes"]*100,2)}\%} more likely to utilize. \\
+
+While raw utilization did not change much, we can apply this same logic to the multinomial regression to try and get a better understanding of how the child with higher SES may have had different utilization patterns among the menu of possible facility types:
+
+
+<<resff, echo=FALSE, warning=FALSE, results='asis'>>=
+
 resf1   <- mlogitsim(x=xhyp1,b=simulatedbetasf)['mean',]  
 resf2   <- mlogitsim(x=xhyp2,b=simulatedbetasf)['mean',]   
 difference <- firstdiffs(mlogitsim(x=xhyp2,b=simulatedbetasf,summary=F)  ,
@@ -286,28 +437,558 @@ difference <- firstdiffs(mlogitsim(x=xhyp2,b=simulatedbetasf,summary=F)  ,
                          ci=0.95,alterns=simulatedbetasf$altnames)
 res=rbind(resf1,resf2,difference)
 row.names(res)<-c("hyp1_mean","hyp2_mean",'diff_lci','diff_mean','diff_uci')
+
+print(xtable(t(res),
+             caption='\\Hypothetical data for low and high educational attainment households.}',
+             label="hypdat"),table.placement="H", include.rownames=T)
+
   
+@
+
+
+Since there are so many alternatives, it may be easier to take in these differences in probability visually:
+
+
+<<sassds, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',fig.cap="\\textit{These two bars show the estimated utilization breakdown for the two hypothetical people described above.}",fig.lp='fig:'>>=
+ library(gridExtra)
+ grid.arrange(stbar(res=resf1,title="Hyp. 1"), stbar(res=resf2,"Hyp. 2"),ncol=2)
+
+@
+
+
+And with uncertainty intervals we can see which differences are significant:
+
+<<sasds, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',fig.cap="\\textit{The lines show the difference with 95 percent confidence intervals between the two individuals described above.}",fig.lp='fig:'>>=
+  forestplot(d=list(cbind(data.frame('name'=colnames(difference)),t(difference),id=rep("Difference",nrow(t(difference))))), 
+             xlab="Change Probability of Choice with Higher SES",
+             ylab="Alternative",
+             fdiff=T)
+
+@
+
+
+
+  
+%##########################################################################  
+  \paragraph{Predicting changing utilization patterns}
+  
+  
+\textbf{Given future changes educational attainment}  
+  
+According to GBD forecasting estimates, maximum educational attainment across all age-sex groups should reach 11.45 year by 2030 - rising from 8.6 in 2010. Using these numbers, we track how this could change utilization patterns over time. Lets see how this plays out for various hypothetical individuals
+
+
+<<eduedu, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',fig.cap="\\textit{How utilization patterns may change with growing educational attainmet over time. 25 year old rural female with cough from lowest asset index.}",fig.lp='fig:'>>=
+ 
+ 
+customhypnames=c("male","age","urban","max_hh_yedu","ill_chronic","ill_malaria",
+                                         "ill_headache","ill_diarrhea","ill_cough","reg_activities_stopped",
+                                         "asset_index2","asset_index3","asset_index4","asset_index5")
+customhypvals= c(0,25,0,8.64,0,0,0,0,1,0,0,0,0,0)
+
+
+ x2010 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,customhypnames,
+                                  customhypvals),b=simulatedbetasf)
+ x2015 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata, customhypnames,
+                                  customhypval= c(0,25,0,9.34 ,0,0,0,0,1,0,0,0,0,0)),b=simulatedbetasf)
+ x2020 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,  customhypnames,
+                                  customhypval= c(0,25,0,10.04,0,0,0,0,1,0,0,0,0,0)),b=simulatedbetasf)
+ x2025 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,  customhypnames,
+                                  customhypval= c(0,25,0,10.76,0,0,0,0,1,0,0,0,0,0)),b=simulatedbetasf)
+ x2030 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,  customhypnames,
+                                  customhypval= c(0,25,0,11.45,0,0,0,0,1,0,0,0,0,0)),b=simulatedbetasf)
+
+ 
+ grid.arrange(stbar(res=x2010,title="2010 \n Edu = 8.6" ,s=2.5,titlesize=12),
+              stbar(res=x2015,title="2015 \n Edu = 9.3" ,s=2.5,titlesize=12),
+              stbar(res=x2020,title="2020 \n Edu = 10.0",s=2.5,titlesize=12),
+              stbar(res=x2025,title="2025 \n Edu = 10.8",s=2.5,titlesize=12),
+              stbar(res=x2030,title="2030 \n Edu = 11.5",s=2.5,titlesize=12),ncol=5)
+ 
+@
+
+
+We find that the effect of education alone in this case is too yield any significant changes in utilization over the next 15 years.
+Looking at a different type of individual, we see again that education alone is not predicated to change utilization patterns very much:
+
+<<eduedu2, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',fig.cap="\\textit{How utilization patterns may change with growing educational attainmet over time. 1 year old rural male with diarrhea from lowest asset index.}",fig.lp='fig:'>>=
+ 
+ 
+customhypnames=c("male","age","urban","max_hh_yedu","ill_chronic","ill_malaria",
+                                         "ill_headache","ill_diarrhea","ill_cough","reg_activities_stopped",
+                                         "asset_index2","asset_index3","asset_index4","asset_index5")
+customhypvals= c(1,1,0,8.64,0,0,0,1,0,0,0,0,0,0)
+
+
+ x2010 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,customhypnames,
+                                  customhypvals),b=simulatedbetasf)
+ x2015 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata, customhypnames,
+                                  customhypval= c(1,1,0,9.34 ,0,0,0,1,0,0,0,0,0,0)),b=simulatedbetasf)
+ x2020 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,  customhypnames,
+                                  customhypval= c(1,1,0,10.04,0,0,0,1,0,0,0,0,0,0)),b=simulatedbetasf)
+ x2025 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,  customhypnames,
+                                  customhypval= c(1,1,0,10.76,0,0,0,1,0,0,0,0,0,0)),b=simulatedbetasf)
+ x2030 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,  customhypnames,
+                                  customhypval= c(1,1,0,11.45,0,0,0,1,0,0,0,0,0,0)),b=simulatedbetasf)
+
+ 
+ grid.arrange(stbar(res=x2010,title="2010 \n Edu = 8.6" ,s=2.5,titlesize=12),
+              stbar(res=x2015,title="2015 \n Edu = 9.3" ,s=2.5,titlesize=12),
+              stbar(res=x2020,title="2020 \n Edu = 10.0",s=2.5,titlesize=12),
+              stbar(res=x2025,title="2025 \n Edu = 10.8",s=2.5,titlesize=12),
+              stbar(res=x2030,title="2030 \n Edu = 11.5",s=2.5,titlesize=12),ncol=5)
+ 
+ 
+@
+
+It may also be interesting to see how these patterns shift if the person in question is simulataneously moving up the income quantiles (so if they are in 1 in 2010, 2 in 2015, and so on until they are in the highest bracket in 2030):
+
+
+<<edued12u3, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',fig.cap="\\textit{How utilization patterns may change with growing educational attainmet over time. 25 year old rural female with cough from lowest asset index.}",fig.lp='fig:'>>=
+ 
+ 
+customhypnames=c("male","age","urban","max_hh_yedu","ill_chronic","ill_malaria",
+                                         "ill_headache","ill_diarrhea","ill_cough","reg_activities_stopped",
+                                         "asset_index2","asset_index3","asset_index4","asset_index5")
+customhypvals= c(0,25,0,8.64,0,0,0,0,1,0,0,0,0,0)
+
+
+ x2010 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,customhypnames,
+                                  customhypvals),b=simulatedbetasf)
+ x2015 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata, customhypnames,
+                                  customhypval= c(0,25,0,9.34 ,0,0,0,0,1,0,1,0,0,0)),b=simulatedbetasf)
+ x2020 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,  customhypnames,
+                                  customhypval= c(0,25,0,10.04,0,0,0,0,1,0,0,1,0,0)),b=simulatedbetasf)
+ x2025 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,  customhypnames,
+                                  customhypval= c(0,25,0,10.76,0,0,0,0,1,0,0,0,1,0)),b=simulatedbetasf)
+ x2030 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,  customhypnames,
+                                  customhypval= c(0,25,0,11.45,0,0,0,0,1,0,0,0,0,1)),b=simulatedbetasf)
+
+ 
+ grid.arrange(stbar(res=x2010,title="2010 \n Quint. 1 \n Edu = 8.6",s=2.5,titlesize=10),
+              stbar(res=x2015,title="2015 \n Quint. 2 \n Edu = 9.3",s=2.5,titlesize=10),
+              stbar(res=x2020,title="2020 \n Quint. 3 \n Edu = 10.0",s=2.5,titlesize=10),
+              stbar(res=x2025,title="2025 \n Quint. 4 \n Edu = 10.8",s=2.5,titlesize=10),
+              stbar(res=x2030,title="2030 \n Quint. 5 \n Edu = 11.5",s=2.5,titlesize=10),ncol=5)
+ 
+ 
+@
+
+
+In this case, we do see more change in both overall utilization as well as utilization patterns among facility alternatives, as ``No Care'' is being replaced with more consumption of private health providers. 
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{2007-2008 General Household Survey (GHS)}
+
+
+Replication of the above using GHS data.
+
+<<ls23ssetup2,include=F>>=
+# setwd('code/knitr')
+rm(list=ls())
+source('../model.r')
+
+load('C:/Users/royburst/Google Drive/choice/data/nga_ghs_2007_2008_prepped.RData')
+data=ghs
+# 
+
+# condition on illness. Otherwise its a weird and biased mix of utilizers (but no info on non-utilizers that arent sick but for instance missed  preventative visit)
+data<-data[data$ill.4wks==1,]
+
+# remove where we do not know the facility type
+#data=data[data$facility!="",]
+@
+
+<<lss23setup222,include=F>>=
+  # format the data long by my chosen alt variable
+
+  #coef list
+  coefs=c('male'                   = '0/1 is repondent male',
+          'age'                    = 'Age in years',
+          #'age2'                   = 'Square of age in years',
+          'urban'                  = '0/1 does the person live in an urban area',
+          'hh_size'                = 'Number of HH members',
+          'max_hh_yedu'            = 'max years of education, any HH member',
+          'assets'                 = '0/1 HH has at least one of: phone, cell, tv, pc, internet',
+          'ill.fever'              = '0/1 was respondent ill with malaria', 
+          'ill.diarrhea'           = '0/1 was respondent ill with diarrhea', 
+          'ill.cough'              = '0/1 was respondent ill with a cough',
+          'reg_activities_stopped' = '0/1 was respondent so ill that regular activities stopped')
+  clist=names(coefs)
+  
+
+  data$u='yes';data$u[data$util==0]='no'
+  dat=mnl.data.format(dat=data,
+                      id.variable='pid',
+                      choiceindicator='chosen',
+                      alternatives='u')
+  mnlu <- mnl.model(d=dat,
+                     alternatives='alts',
+                     id.variable='pid',
+                     choiceindicator='chosen',
+                     coefficients=clist,
+                     dummycoeffs=NULL)
+  dat=mnl.data.format(dat=data[data$facility!="",],
+                      id.variable='pid',
+                      choiceindicator='chosen',
+                      alternatives='facility')
+  mnlf <- mnl.model(d=dat,
+                   alternatives='alts',
+                   id.variable='pid',
+                   choiceindicator='chosen',
+                   coefficients=clist,
+                   dummycoeffs=NULL)
+  
+   
+  
+  # simulate betas from the model object
+  simulatedbetasu<- sim.betas(m=mnlu$model,sims=1000)
+  simulatedbetasf<- sim.betas(m=mnlf$model,sims=1000)
+
+  # unduplicated to work with
+  undup <- data[!duplicated(data$pid),]
+  @
+  
+  
+ 
+
+
+%##########################################################################  
+  \paragraph{Data description}
+  
+The dataset has \textbf{\Sexpr{nrow(undup)}} complete observations of individuals who reported illness in the past 4 weeks. 
+  
+For this survey, we ran two models. First, with a binary indicator for utilization \texttt{(Alternatives: \Sexpr{unique(data$u)}. Reference: \Sexpr{simulatedbetasu$ref})}, and with a mutinomial indicator for health facility choice \texttt{(Alternatives: \Sexpr{unique(data$facility)}. Reference: \Sexpr{simulatedbetasf$ref})}. \\\
+
+For both models we included the following covariates: \\
+
+<<ls32s_model_covariates, echo=FALSE, warning=FALSE, results='asis'>>=
+library(xtable)
+ctable <-data.frame(description=coefs)
+print(xtable(ctable,table.placement="H", 
+             caption="Covariate names and descriptions.",
+             label='ccccc'),include.rownames=T , tabular.environment = 'longtable')
+@
+
+
+
+The summary statistics for the covariates, among those who responded to being ill (ie conditional on need) in the past 2 weeks:
+
+
+<<ls23s_model_covariates_summstats, echo=FALSE, warning=FALSE, results='asis'>>=
+
+res= t(as.matrix(rep(NA,6)))
+for(n in row.names(ctable)){
+  print(n)
+  m<-t(as.matrix(t(summary(as.numeric(undup[,n])))[,1:6]))
+  row.names(m)<-n
+  res<-rbind(res,m)
+}
+res<-res[-1,]
+res<-data.frame(res)
+res$Mean<-round(res$Mean,2)
+colnames(res)<-c('min','_25pct','_50pct','mean','_75pct','max')
+
+print(xtable(res,table.placement="H", 
+             caption="Summary statistics for the covariates used in the model. Minimum, 25,50,75 percentiles, mean, and max are included.",
+             label='sumstat'),include.rownames=T , tabular.environment = 'longtable')
+@
+
+
+For our two outcomes, utilization and facility type, we observed the following distributions (relative frequencies) of responses:
+
+
+<<lss32_model_covariates_summstatsoutcomes, echo=FALSE, warning=FALSE, results='asis'>>=
+
+res<-as.matrix(paste0(round(table(undup$u)/sum(table(undup$u))*100,2),'%'))
+rownames(res)<-simulatedbetasu$altnames
+colnames(res)<-"Relative Frequencies"
+
+
+res2<-as.matrix(paste0(round(table(undup$facility[undup$facility!=""])/
+                               sum(table(undup$facility[undup$facility!=""]))*100,2),'%'))
+rownames(res2)<-simulatedbetasf$altnames
+colnames(res2)<-"Relative Frequencies"
+
+
+print(xtable(res,table.placement="H", 
+             caption="Distribution of Utilization outcome",
+             label='sumstatu'),include.rownames=T , tabular.environment = 'longtable')
+
+print(xtable(res2,table.placement="H", 
+             caption="Distribution of Facility choice outcome.",
+             label='sumstatf'),include.rownames=T , tabular.environment = 'longtable')
+
+
+@
+
+
+We can start to get an idea of the relationships between some of these covariates and utilization by simple cross-tabulation.
+
+<<XTA232B, echo=FALSE, warning=FALSE, results='asis'>>=
+
+res= t(as.matrix(rep(NA,2)))
+for(n in row.names(ctable)){
+  m<-t(as.matrix(t(summary(as.numeric(undup[,n])[undup$u=="yes"]))[,'Mean']))
+  m2<-t(as.matrix(t(summary(as.numeric(undup[,n])[undup$u=="no"]))[,'Mean']))
+  row.names(m)<-n
+  m<-cbind(m,m2)
+  res<-rbind(res,m)
+}
+res<-res[-1,]
+res<-data.frame(res)
+res<-round(res,2)
+colnames(res)<-c("Mean (Utilized)","Mean (Did not Util.)")
+
+print(xtable(res,table.placement="H", 
+             caption="Mean values of covariates for responded who were ill and did / did not utilize healthcare.",
+             label='sumfdgstat'),include.rownames=T , tabular.environment = 'longtable')
+@
+
+
+In the following section we test these relationships formally using (binary and multinomial) logistic regression models.
+
+
+%##########################################################################  
+  \paragraph{Regression models}
+  
+  
+Below are the estimated coefficients for each model, recall you will see many for the multinomial logit model because we have a coefficient for each covariate-alternative (non-reference) combination. They are identified in the format \textit{alternative}:\textit{covariate}: \\\
+
+<<ls232s_model_results, echo=FALSE, warning=FALSE, results='asis'>>=
+  
+print(xtable(model.results.grob(m=mnlu$model,xtable=T),
+             caption='\\textit{Estimated Coefficients for Nigeria LSS model with Binary Utilization Outcome}',
+             label="lsscoefu"),table.placement="H", include.rownames=T)
+  
+print(xtable(model.results.grob(m=mnlf$model,xtable=T),
+             caption='\\textit{Estimated Coefficients for Nigeria LSS model with Multinomial Facility Choice Outcome}',
+             label="lsscoeff"),table.placement="H", include.rownames=T , tabular.environment = 'longtable')
+
+
+@
+  
+  
+  
+  
+%##########################################################################  
+  \paragraph{Interpretting models through counterfactual analysis}
+  
+  
+To more easily interpret these findings we can assume hypothetical covariate values (also known as counterfactuals), and predict the alternative-specific probabilities under these values. We will begin by looking at the binary logistic case. Often it is interesting to look at the predicted probabilities under the mean values of each covariates. Hence we get the following covariate values:
+
+<<ls232s_hypm, echo=FALSE, warning=FALSE, results='asis'>>=
+base <- make.hyp.data(modeldata=mnlu$modeldata)
+res<-data.frame(variable=colnames(base),value=c(t(base[1,])))
+
+print(xtable(res,
+             caption='\\textit{Motivating example for counterfactual analysis. Hypothetical data.}',
+             label="hypdat"),table.placement="H", include.rownames=F)
+
+
+@
+
+Many of these values end up being impractical because they do not represent true values in our data. This ``mean case'' is often not informative for us, and what we are more interested in is predicting the utilization patterns of certain individuals who fit profiles of interest. For example, an individual we can qualititatively describe as a newborn male child with diarrhea from a household with low educational attainment would be represented by the following hypothetical data:
+
+<<ls232s_hyp, echo=FALSE, warning=FALSE, results='asis'>>=
+xhyp1 <- make.hyp.data(modeldata=mnlu$modeldata,
+                         customhypname=c("male","age","urban","max_hh_yedu",
+                                         "ill.fever","ill.diarrhea","ill.cough","reg_activities_stopped",
+                                         "assets"),
+                         customhypval= c(1,0,0,3,
+                                         0,0,1,0,
+                                         0))
+res<-data.frame(variable=colnames(xhyp1),value=c(t(xhyp1[1,])))
+
+print(xtable(res,
+             caption='\\textit{Motivating example for counterfactual analysis. Hypothetical data.}',
+             label="hypdat"),table.placement="H", include.rownames=F)
+
+
+@
+
+We can simulate from the estimated coefficients and their covariances to generate fitted probabilities for this example person. In this case we are interested in probability of utilization. See observe the following results:
+
+<<re232s, echo=FALSE, warning=FALSE, results='asis'>>=
+
+resu <- mlogitsim(x=xhyp1,b=simulatedbetasu)
+resf <- mlogitsim(x=xhyp1,b=simulatedbetasf)  
+
+
+    
+print(xtable(model.pred.grob(resu,xtable=T),
+             caption='\\textit{Simulated probabilities for hypothetical individual. Utilization only model.}'),
+             table.placement="H", include.rownames=T)           
+#print(xtable(model.pred.grob(resf,xtable=T),
+#             caption='\\textit{Simulated probabilities for hypothetical individual. Facility Choice model.}'),
+#             table.placement="H", include.rownames=T)           
+  
+  
+@
+
+In this case, we find it highly likely that this person will utilize some sort of healthcare, with a mean predicted probability of \textbf{\Sexpr{resu['mean','yes']}}. \\\
+
+
+By changing certain values and holding the rest constant, we can begin to understand the effects of certain variables on utilization. Thus, we may find it interesting to compare two hypotheticals. Consider for example we were interested in how the utilization pattern would change for this child if, all else held equal, they were from a household with 10 years more education, and from a household in the highest asset index. Here is what our two hypothetical datasets would look like:
+
+  
+<<lss_232hyp2, echo=FALSE, warning=FALSE, results='asis'>>=
+xhyp2 <- make.hyp.data(modeldata=mnlu$modeldata,
+                         customhypname=c("male","age","urban","max_hh_yedu",
+                                         "ill.fever","ill.diarrhea","ill.cough","reg_activities_stopped",
+                                         "assets"),
+                         customhypval= c(1,0,0,13,
+                                         0,0,1,0,
+                                         0))
+
+res<-data.frame(variable=colnames(xhyp1),hyp1.value=c(t(xhyp1[1,])),hyp2.value=c(t(xhyp2[1,])))
+
+print(xtable(res,
+             caption='\\Hypothetical data for low and high educational attainment households.}',
+             label="hypdat"),table.placement="H", include.rownames=F)
+
+@
+
+We can simulate the draw-level differences (hyp2-hyp1) and look at the changing utilization pattern:
+
+<<lss232_hyp2212, echo=FALSE, warning=FALSE, results='asis'>>=
+resf1   <- mlogitsim(x=xhyp1,b=simulatedbetasu)['mean',]  
+resf2   <- mlogitsim(x=xhyp2,b=simulatedbetasu)['mean',]   
+difference <- firstdiffs(mlogitsim(x=xhyp2,b=simulatedbetasu,summary=F)  ,
+                         mlogitsim(x=xhyp1,b=simulatedbetasu,summary=F)  ,
+                         ci=0.95,alterns=simulatedbetasu$altnames)
+res=rbind(resf1,resf2,difference)
+row.names(res)<-c("hyp1_mean","hyp2_mean",'diff_lci','diff_mean','diff_uci')
+
 print(xtable(t(res),
              caption='\\Hypothetical data for low and high educational attainment households.}',
              label="hypdat"),table.placement="H", include.rownames=F)
 
 @
 
-It may be easier to take in these differences in probability visually:
+As you can see, the child with higher SES indicators (education and asset index) was estimated to be \textbf{\Sexpr{round(res["diff_mean","yes"]*100,2)}\%} more likely to utilize. \\
 
-<<sasds, echo=FALSE, warning=FALSE, results='asis'>>=
-  forestplot(d=list(cbind(data.frame('name'=colnames(difference)),t(difference),id=rep("Difference",nrow(t(difference))))), 
-             xlab="Change Probability of Choice With 10 years more edu",
-             ylab="Alternative",
-             fdiff=T)
+While raw utilization did not change much, we can apply this same logic to the multinomial regression to try and get a better understanding of how the child with higher SES may have had different utilization patterns among the menu of possible facility types:
 
+
+<<res323ff, echo=FALSE, warning=FALSE, results='asis'>>=
+
+resf1   <- mlogitsim(x=xhyp1,b=simulatedbetasf)['mean',]  
+resf2   <- mlogitsim(x=xhyp2,b=simulatedbetasf)['mean',]   
+difference <- firstdiffs(mlogitsim(x=xhyp2,b=simulatedbetasf,summary=F)  ,
+                         mlogitsim(x=xhyp1,b=simulatedbetasf,summary=F)  ,
+                         ci=0.95,alterns=simulatedbetasf$altnames)
+res=rbind(resf1,resf2,difference)
+row.names(res)<-c("hyp1_mean","hyp2_mean",'diff_lci','diff_mean','diff_uci')
+
+print(xtable(t(res),
+             caption='\\Hypothetical data for low and high educational attainment households.}',
+             label="hypdat"),table.placement="H", include.rownames=T)
+
+  
+@
+
+
+Since there are so many alternatives, it may be easier to take in these differences in probability visually:
+
+
+<<s32assds, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',fig.cap="\\textit{These two bars show the estimated utilization breakdown for the two hypothetical people described above.}",fig.lp='fig:'>>=
+ library(gridExtra)
+ grid.arrange(stbar(res=resf1,title="Hyp. 1",nocarecategory='NoCare'), 
+              stbar(res=resf2,"Hyp. 2",nocarecategory='NoCare'),ncol=2)
 
 @
 
 
+And with uncertainty intervals we can see which differences are significant:
+
+<<sas323ds, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',fig.cap="\\textit{The lines show the difference with 95 percent confidence intervals between the two individuals described above.}",fig.lp='fig:'>>=
+  forestplot(d=list(cbind(data.frame('name'=colnames(difference)),t(difference),id=rep("Difference",nrow(t(difference))))), 
+             xlab="Change Probability of Choice with Higher SES",
+             ylab="Alternative",
+             fdiff=T)
+
+@
+
+
+
+  
+%##########################################################################  
+  \paragraph{Predicting changing utilization patterns}
+  
+  
+\textbf{Given future changes educational attainment}  
+  
+According to GBD forecasting estimates, maximum educational attainment across all age-sex groups should reach 11.45 year by 2030 - rising from 8.6 in 2010. Using these numbers, we track how this could change utilization patterns over time. Lets see how this plays out for various hypothetical individuals
+
+
+<<eduedu2132, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',fig.cap="\\textit{How utilization patterns may change with growing educational attainmet over time. 25 year old rural female with cough from lowest asset index.}",fig.lp='fig:'>>=
+ 
+customhypnames=c("male","age","urban","max_hh_yedu",
+                                         "ill.fever","ill.diarrhea","ill.cough","reg_activities_stopped",
+                                         "assets")
+customhypvals= c(0,25,0,8.64,0,0,1,0,0)
+
+
+
+ x2010 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,customhypnames,
+                                  customhypvals),b=simulatedbetasf)
+ x2015 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata, customhypnames,
+                                  customhypval= c(0,25,0,9.34,0,0,1,0,0)),b=simulatedbetasf)
+ x2020 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,  customhypnames,
+                                  customhypval= c(0,25,0,10.04,0,0,1,0,0)),b=simulatedbetasf)
+ x2025 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,  customhypnames,
+                                  customhypval= c(0,25,0,10.76,0,0,1,0,0)),b=simulatedbetasf)
+ x2030 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,  customhypnames,
+                                  customhypval= c(0,25,0,11.45,0,0,1,0,0)),b=simulatedbetasf)
+
+ 
+ grid.arrange(stbar(res=x2010,title="2010 \n Edu = 8.6" ,s=2.5,titlesize=12,nocarecategory='NoCare'),
+              stbar(res=x2015,title="2015 \n Edu = 9.3" ,s=2.5,titlesize=12,nocarecategory='NoCare'),
+              stbar(res=x2020,title="2020 \n Edu = 10.0",s=2.5,titlesize=12,nocarecategory='NoCare'),
+              stbar(res=x2025,title="2025 \n Edu = 10.8",s=2.5,titlesize=12,nocarecategory='NoCare'),
+              stbar(res=x2030,title="2030 \n Edu = 11.5",s=2.5,titlesize=12,nocarecategory='NoCare'),ncol=5)
+ 
+@
+
+
+We find that the effect of education alone in this case is too yield any significant changes in utilization over the next 15 years.
+Looking at a different type of individual, we see again that education alone is not predicated to change utilization patterns very much:
+
+<<eduedu232, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',fig.cap="\\textit{How utilization patterns may change with growing educational attainmet over time. 1 year old rural male with diarrhea from lowest asset index.}",fig.lp='fig:'>>=
+ 
+customhypnames=c("male","age","urban","max_hh_yedu",
+                                         "ill.fever","ill.diarrhea","ill.cough","reg_activities_stopped",
+                                         "assets")
+customhypvals= c(1,1,0,8.64,0,1,0,0,0)
+
+
+ x2010 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,customhypnames,
+                                  customhypvals),b=simulatedbetasf)
+ x2015 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata, customhypnames,
+                                  customhypval= c(1,1,0,9.34,0,1,0,0,0)),b=simulatedbetasf)
+ x2020 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,  customhypnames,
+                                  customhypval= c(1,1,0,10.04,0,1,0,0,0)),b=simulatedbetasf)
+ x2025 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,  customhypnames,
+                                  customhypval= c(1,1,0,10.76,0,1,0,0,0)),b=simulatedbetasf)
+ x2030 <- mlogitsim(make.hyp.data(modeldata=mnlf$modeldata,  customhypnames,
+                                  customhypval= c(1,1,0,11.45,0,1,0,0,0)),b=simulatedbetasf)
+
+ 
+ grid.arrange(stbar(res=x2010,title="2010 \n Edu = 8.6" ,s=2.5,titlesize=12,nocarecategory='NoCare'),
+              stbar(res=x2015,title="2015 \n Edu = 9.3" ,s=2.5,titlesize=12,nocarecategory='NoCare'),
+              stbar(res=x2020,title="2020 \n Edu = 10.0",s=2.5,titlesize=12,nocarecategory='NoCare'),
+              stbar(res=x2025,title="2025 \n Edu = 10.8",s=2.5,titlesize=12,nocarecategory='NoCare'),
+              stbar(res=x2030,title="2030 \n Edu = 11.5",s=2.5,titlesize=12,nocarecategory='NoCare'),ncol=5)
+ 
+ 
+@
+
+
 \pagebreak
-
-
 
 
 

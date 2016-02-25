@@ -15,7 +15,7 @@ library(mlogit)
 
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## make variables dummies where needed
-  make.dummies <- function(dat=d,
+  make.dummies <- function(datt=d,
                            var,
                            nameto,
                            intercept=FALSE,
@@ -24,17 +24,19 @@ library(mlogit)
     if(class(var)!='character')     stop('Var expects character')
     if(class(nameto) !='character') stop('nameto expects character')
   
-    assign(nameto,factor(dat[,var]))
+   # print(head(dat))
+    assign(nameto,factor(datt[,var]))
     
     form=as.formula(paste0('~',nameto))
     
+    options(na.action='na.pass')
     if(intercept)
       res <- model.matrix(form)
     else
       res <- model.matrix(form)[,-1]  
     
     if(append)
-      res <- cbind(dat,res)
+      res <- cbind(datt,res)
     
     return(res)
   }
@@ -101,7 +103,7 @@ mnl.data.format <- function(dat=data,
           # data must be formatted to one row per alternative/attribute.. throw error if not the case
           
           # format alternatives as intercept
-          d= make.dummies(dat=d,var=alternatives,nameto='int',intercept=T,append=T)
+          d= make.dummies(datt=d,var=alternatives,nameto='int',intercept=T,append=T)
           
           # start a list of coefficients
           
@@ -112,7 +114,8 @@ mnl.data.format <- function(dat=data,
           # format dummy coeffs and save all possible values in coeff list
           if(!is.null(dummycoeffs))
             for(dum in dummycoeffs){
-              d= make.dummies(var=dum,nameto=dum,intercept=F,append=T)
+              #print(dum)
+              d= make.dummies(datt=d,var=dum,nameto=dum,intercept=F,append=T)
               form = paste0(form,'+',
                        paste(colnames(make.dummies(var=dum,nameto=dum,intercept=F,append=F)), #[-1],
                        collapse="+"))
@@ -131,9 +134,10 @@ mnl.data.format <- function(dat=data,
                          shape="long", alt.var=alternatives, id.var=id.variable)
         
           # clean data frame 
-          dd<-model.frame(form,data=md)
+          dd<-model.frame(form,data=md,na.action = 'na.omit')
           
           # first run a straightforward multinomial logit
+          
           m <- mlogit(form,data=dd)
           
           # if rpl is selected, run that as well
@@ -309,9 +313,10 @@ mnl.data.format <- function(dat=data,
 ## plot extracted predictions
   
   # forest plot
+  require(ggplot2)
+  
   forestplot <- function(d=list(), xlab="Probability of Choosing Utilization Alternative",ylab="Utilized",fdiff=F){
     d <- data.frame(do.call("rbind", d) )
-    require(ggplot2)
     p <- ggplot(d, aes(x=name, y=mean, ymin=lci, ymax=uci,colour=id)) + 
       geom_pointrange(data=subset(d,as.numeric(d$id)==1),size=1.2) +  
       coord_flip() +
@@ -339,6 +344,53 @@ mnl.data.format <- function(dat=data,
 
   
   # stacked bar
+  library(ggplot2)
+  library(RColorBrewer)
+  library(plyr)
+  stbar<-function(res=resf2,
+                  title="",
+                  nocarecategory='Nocare',
+                  pal="Paired",s=4,titlesize=15){
+    
+    # remove NoCare from total bar height.
+    res<-res[names(res)!=nocarecategory]
+    
+    #
+    if(nrow(res)>1)
+      res<-res["mean",]
+    res<-data.frame(name=names(res),x=as.numeric(res))
+    res$x = round(res$x*100,0)
+    res$pct = paste0(res$x,"%")
+    res <- ddply(res, .(), 
+                  transform, pos = cumsum(x) - (0.5 * x)
+    )
+    
+    res$z=100-sum(res$x)
+    
+    ggplot(res,aes(x=1,y=x,fill=name,width=.1))+
+      geom_bar(stat='identity')+
+      xlab("")+
+      ylab("")+ggtitle(title)+theme_bw()+
+      theme(plot.title = element_text(size=titlesize, face="bold"))+
+      theme(plot.title = element_text(hjust = -0.02,vjust=-0.02))+
+      theme(panel.border = element_blank())+ 
+      theme(legend.position = "none") + 
+      #scale_fill_manual(values=cbPalette)+
+      scale_fill_brewer(palette = pal)+
+      theme(axis.text.x  = element_blank())+
+      theme(axis.text.y  = element_blank())+
+      #theme(axis.text.y  = element_text(size=25))+
+      labs(x=NULL)+
+      theme(line = element_blank())+
+      geom_hline(yintercept=100, linetype = "longdash")+
+      geom_text(aes(label = pct, y = pos,x=1-(.4*.1)), hjust=0,size = s ,color='white',fontface='bold')+
+      geom_text(aes(label = name, y = pos,x=1-(.15*.1)), hjust=0,size = s,color='white',fontface='bold')+
+      geom_text(aes(label = paste0(z,"% No Care"), y = 98,x=1-(.4*.1)), 
+                hjust=0,size = s,color='black')
+    
+    
+  }
+  
   
   
  
