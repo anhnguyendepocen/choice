@@ -579,6 +579,157 @@ In this case, we do see more change in both overall utilization as well as utili
 
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\paragraph{Re-analyzing Binary-Logistic Utilization Model with Outcome adjusted to not include PPMV and Home}
+
+It can be argued that what is being recorded as care-seeking at PPMVs and at Home yields largely ineffective care. We re-analyze the binary logistic utilization model here, but now counting all PPMV and Home care as non-utilization:
+
+
+<<lsssetu212131p,include=F>>=
+# setwd('code/knitr')
+
+
+data<-read.csv("J:/Project/phc/nga/choice/data/1f_fully_prepped.csv")
+
+# condition on illness. Otherwise its a weird and biased mix of utilizers (but no info on non-utilizers that arent sick but for instance missed  preventative visit)
+data<-data[data$sick_injured==1,]
+
+  # format the data long by my chosen alt variable
+
+  #coef list
+  coefs=c('male'                   = '0/1 is repondent male',
+          'age'                    = 'Age in years',
+          #'age2'                   = 'Square of age in years',
+          'urban'                  = '0/1 does the person live in an urban area',
+          'hh_size'                = 'Number of HH members',
+          'max_hh_yedu'            = 'max years of education, any HH member (range 0 to 18)',
+          'asset_indexquantile'    = '1-5 which quintile of asset ownership does the HH fall under.',
+          'ill_chronic'            = '0/1 was respondent ill with a chronic illness',
+          'ill_malaria'            = '0/1 was respondent ill with malaria', 
+          'ill_headache'           = '0/1 was respondent ill with a headache',
+          'ill_diarrhea'           = '0/1 was respondent ill with diarrhea', 
+          'ill_cough'              = '0/1 was respondent ill with a cough',
+          'reg_activities_stopped' = '0/1 was respondent so ill that regular activities stopped',
+          'hc_60m'                 = '0/1 is there a clinic or hosp within an hour from respondents home')
+          #'hosp_60m'               = '0/1 is there a hospital within an hour from respondents home')
+  
+  clist=names(coefs)
+  
+  # binary clinic and hosp
+  data$clinic_60m = !data$time_to_health%in%c("180+","60-179 mins")
+  data$clinic_60m[data$time_to_health%in%c("")]=NA
+  data$hosp_60m = !data$time_to_hosp%in%c("180+","60-179 mins")
+  data$hosp_60m[data$time_to_hosp%in%c("")]=NA
+  data$hc_60m=data$hosp_60m*data$clinic_60m
+  
+  # make asset quintile binary
+  dummyvars=c('asset_indexquantile')
+  clist = clist[!clist%in%dummyvars]
+  clist<-c(clist,'asset_index2', 'asset_index3', 'asset_index4', 'asset_index5')
+  # run the models (util and facil)
+  
+  data$u='yes';data$u[data$util==0|data$fac_type1=="Nocare"|data$fac_type1=="Home"]='no'
+  dat=mnl.data.format(dat=data,
+                      id.variable='pid',
+                      choiceindicator='chosen',
+                      alternatives='u')
+  mnlu <- mnl.model(d=dat,
+                     alternatives='alts',
+                     id.variable='pid',
+                     choiceindicator='chosen',
+                     coefficients=clist,
+                     dummycoeffs=NULL)
+   
+  
+  # simulate betas from the model object
+  simulatedbetasu<- sim.betas(m=mnlu$model,sims=1000)
+
+  # unduplicated to work with
+  undup <- data[!duplicated(data$pid),]
+  @
+  
+  
+
+
+
+<<XTA2112B, echo=FALSE, warning=FALSE, results='asis'>>=
+ctable <-data.frame(description=coefs)
+
+res= t(as.matrix(rep(NA,2)))
+for(n in row.names(ctable)){
+  m<-t(as.matrix(t(summary(undup[,n][undup$u=="yes"]))[,'Mean']))
+  m2<-t(as.matrix(t(summary(undup[,n][undup$u=="no"]))[,'Mean']))
+  row.names(m)<-n
+  m<-cbind(m,m2)
+  res<-rbind(res,m)
+}
+res<-res[-1,]
+res<-data.frame(res)
+res<-round(res,2)
+colnames(res)<-c("Mean (Utilized)","Mean (Did not Util.)")
+
+
+print(xtable(res,table.placement="H", 
+             caption="Distribution of Utilization outcome",
+             label='sumstastu'),include.rownames=T , tabular.environment = 'longtable')
+
+print(xtable(res,table.placement="H", 
+             caption="Mean values of covariates for responded who were ill and did / did not utilize healthcare.",
+             label='sumfdsdfgstat'),include.rownames=T , tabular.environment = 'longtable')
+
+print(xtable(model.results.grob(m=mnlu$model,xtable=T),
+             caption='\\textit{Estimated Coefficients for Nigeria LSS model with Binary Utilization Outcome}',
+             label="lsssdfcoefu"),table.placement="H", include.rownames=T)
+
+@
+
+
+
+
+
+<<lss_hydsfpm, echo=FALSE, warning=FALSE, results='asis'>>=
+base <- make.hyp.data(modeldata=mnlu$modeldata)
+res<-data.frame(variable=colnames(base),value=c(t(base[1,])))
+
+
+
+xhyp1 <- make.hyp.data(modeldata=mnlu$modeldata,
+                         customhypname=c("male","age","urban","max_hh_yedu","ill_chronic","ill_malaria",
+                                         "ill_headache","ill_diarrhea","ill_cough","reg_activities_stopped",
+                                         "asset_index2","asset_index3","asset_index4","asset_index5"),
+                         customhypval= c(1,0,0,3,0,0,0,1,0,0,0,0,0,0))
+res<-data.frame(variable=colnames(xhyp1),value=c(t(xhyp1[1,])))
+
+
+
+resu <- mlogitsim(x=xhyp1,b=simulatedbetasu)
+
+
+
+  
+xhyp2 <- make.hyp.data(modeldata=mnlu$modeldata,
+                         customhypname=c("male","age","urban","max_hh_yedu","ill_chronic","ill_malaria",
+                                         "ill_headache","ill_diarrhea","ill_cough","reg_activities_stopped",
+                                         "asset_index2","asset_index3","asset_index4","asset_index5"),
+                         customhypval= c(1,0,0,13,0,0,0,1,0,0,0,0,0,1))
+
+resf1   <- mlogitsim(x=xhyp1,b=simulatedbetasu)['mean',]  
+resf2   <- mlogitsim(x=xhyp2,b=simulatedbetasu)['mean',]   
+difference <- firstdiffs(mlogitsim(x=xhyp2,b=simulatedbetasu,summary=F)  ,
+                         mlogitsim(x=xhyp1,b=simulatedbetasu,summary=F)  ,
+                         ci=0.95,alterns=simulatedbetasu$altnames)
+res=rbind(resf1,resf2,difference)
+row.names(res)<-c("hyp1_mean","hyp2_mean",'diff_lci','diff_mean','diff_uci')
+
+print(xtable(t(res),
+             caption='\\textit{Estimated difference in utilization probabilities for low and high educational attainment households (Assuming 0 years old male with diarrhea. PPMV and Home care do not count as utilization in this analysis.}',
+             label="hypsdfdat"),table.placement="H", include.rownames=T)
+
+@
+
+
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{2007-2008 General Household Survey (GHS)}

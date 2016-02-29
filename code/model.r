@@ -150,7 +150,7 @@ mnl.data.format <- function(dat=data,
             #             panel=FALSE,correlation=TRUE) 
           }
           
-          return(list(model=m,modeldata=dd))
+          return(list(model=m,modeldata=dd,formula=form))
         }
     
   
@@ -235,7 +235,7 @@ mnl.data.format <- function(dat=data,
   
   
   # Function to Simulate results given hypothetical data and betas from mvnorm
-  mlogitsim <- function(x,b=simulatedbetas,ci=0.95,summary=T) {
+  mlogitsim <- function(x,b=simulatedbetas,ci=0.95,summary=T,meanonly=F) {
     
       # decompose everything I got from running sim.betas
       for(i in 1:length(b)) assign(names(b)[i], b[[i]])
@@ -276,7 +276,11 @@ mnl.data.format <- function(dat=data,
           uci=round(as.numeric(res$upper),5))
         res<-do.call(rbind.data.frame, res)
         colnames(res)<-altnames
-        return(res)
+        if(meanonly==T){
+          return(res['mean',])
+        } else{
+          return(res)
+        }
       }
       if(summary==F) return(simy)
     }
@@ -356,8 +360,10 @@ mnl.data.format <- function(dat=data,
     res<-res[names(res)!=nocarecategory]
     
     #
-    if(nrow(res)>1)
-      res<-res["mean",]
+    if(class(res)=="data.frame"){
+      if(nrow(res)>1)
+        res<-res["mean",]
+    }
     res<-data.frame(name=names(res),x=as.numeric(res))
     res$x = round(res$x*100,0)
     res$pct = paste0(res$x,"%")

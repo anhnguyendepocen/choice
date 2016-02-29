@@ -1,0 +1,665 @@
+
+\documentclass[12pt]{article}
+\usepackage{nameref}
+\usepackage{fullpage}
+\usepackage{pdfpages}
+\usepackage{pdflscape}
+\usepackage{amssymb,amsmath,amsthm} 
+\usepackage{float} 
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1.25in]{geometry}
+\usepackage{pst-bar,pst-plot,pstricks-add}
+\usepackage{graphicx,ctable,booktabs}
+\usepackage{color}
+\usepackage{listings}
+\usepackage[utf8]{inputenc}
+\usepackage{enumerate}
+\usepackage{url}
+\usepackage{framed}
+\usepackage{longtable}
+\usepackage{graphicx}
+\usepackage{sidecap}
+\makeatletter
+\newenvironment{problem}{\@startsection
+       {section}
+       {1}
+       {-.2em}
+       {-3.5ex plus -1ex minus -.2ex}S
+       {2.3ex plus .2ex}
+       {\pagebreak[3]%forces pagebreak when space is small; use \eject for better results
+       \large\bf\noindent{Problem }
+       }
+       }
+       {%\vspace{1ex}\begin{center} \rule{0.3\linewidth}{.3pt}\end{center}}
+       \begin{center}\large\bf \ldots\ldots\ldots\end{center}}
+\makeatother
+
+\usepackage[utf8]{inputenc}
+\usepackage{fourier} 
+\usepackage{array}
+\usepackage{makecell}
+
+\usepackage{enumitem}
+
+
+\renewcommand\theadalign{cb}
+\renewcommand\theadfont{\bfseries}
+\renewcommand\theadgape{\Gape[4pt]}
+\renewcommand\cellgape{\Gape[4pt]}
+
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+}
+ 
+\setlength\parindent{0pt}
+%\SweaveOpts{concordance=TRUE}
+
+% the following converts \paragraph to act like \subsubsubsection
+\makeatletter
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}%
+            {-2.5ex\@plus -1ex \@minus -.25ex}%
+            {1.25ex \@plus .25ex}%
+            {\normalfont\normalsize\bfseries}}
+\makeatother
+\setcounter{secnumdepth}{4} % how many sectioning levels to assign numbers to
+\setcounter{tocdepth}{4}    % how many sectioning levels to show in ToC
+
+
+
+\begin{document}
+%\SweaveOpts{concordance=TRUE}
+
+<<loadinfo,include=F>>=
+library(knitr)
+f <- function(x, options) {
+  paste("\\end{kframe}\n", 
+        "\\caption{", options$capT, "}\n", 
+        hook_plot_tex(x, options), 
+        "\n\\begin{kframe}", sep = "")
+}
+knit_hooks$set(plot = f)
+
+#load
+rm(list=ls())
+source('../model.r')
+data<-read.csv("J:/Project/phc/nga/choice/data/1f_fully_prepped.csv")
+
+ #coef list
+  coefs=c('male'                   = '0/1 is repondent male',
+          'age'                    = 'Age in years',
+          #'age2'                   = 'Square of age in years',
+          'urban'                  = '0/1 does the person live in an urban area',
+          'hh_size'                = 'Number of HH members',
+          'max_hh_yedu'            = 'max years of education, any HH member (range 0 to 18)',
+          'asset_indexquantile'    = '1-5 which quintile of asset ownership does the HH fall under.',
+          'ill_chronic'            = '0/1 was respondent ill with a chronic illness',
+          'ill_malaria'            = '0/1 was respondent ill with malaria', 
+          'ill_headache'           = '0/1 was respondent ill with a headache',
+          'ill_diarrhea'           = '0/1 was respondent ill with diarrhea', 
+          'ill_cough'              = '0/1 was respondent ill with a cough',
+          'reg_activities_stopped' = '0/1 was respondent so ill that regular activities stopped',
+          'hc_60m'                 = '0/1 For those living in rural areas, were they within 1 hr of a facility.')
+  coefs2=coefs
+  clist=names(coefs)
+  
+  # binary clinic and hosp
+  data$clinic_60m = !data$time_to_health%in%c("180+","60-179 mins")
+  data$clinic_60m[data$time_to_health%in%c("")]=NA
+  data$hosp_60m = !data$time_to_hosp%in%c("180+","60-179 mins")
+  data$hosp_60m[data$time_to_hosp%in%c("")]=NA
+  data$hc_60m=data$hosp_60m+data$clinic_60m
+  data$hc_60m[data$hc_60m>1]=1
+  
+  #
+  data$rurhc_60m = data$urban==0 & data$hc_60m == 1
+  
+  # make home and PPMV no care
+  data$fac_type1[data$fac_type1%in%c('Home','PPMV')]="Nocare"
+  
+  # make asset quintile binary
+  dummyvars=c('asset_indexquantile')
+  clist = clist[!clist%in%dummyvars]
+  clist<-c(clist,'asset_index2', 'asset_index3', 'asset_index4', 'asset_index5')
+  
+  #data$asset_index4[data$asset_index5==1]=1
+ # data$asset_index3[data$asset_index4==1]=1
+  #data$asset_index2[data$asset_index3==1]=1
+ 
+  
+  
+  # run the models (util and facil)
+  
+  dat=mnl.data.format(dat=data,
+                      id.variable='pid',
+                      choiceindicator='chosen',
+                      alternatives='fac_type1')
+  mnlf <- mnl.model(d=dat,
+                   alternatives='alts',
+                   id.variable='pid',
+                   choiceindicator='chosen',
+                   coefficients=clist,
+                   dummycoeffs=NULL)
+  form=mnlf$formula
+  # simulate betas from the model object
+  simulatedbetasf<- sim.betas(m=mnlf$model,sims=1000)
+
+
+  
+  # make hyps
+  xhyp1.1 <- make.hyp.data(modeldata=mnlf$modeldata,
+                         customhypname=c("male","age","urban","hc_60m",
+                                         "max_hh_yedu","ill_chronic",
+                                         "ill_malaria",
+                                         "ill_headache",
+                                         "ill_diarrhea","ill_cough",
+                                         "reg_activities_stopped",
+                                         "asset_index2","asset_index3",
+                                         "asset_index4","asset_index5"),
+                         customhypval= c(0,0,0,0,8.6,0,0,0,1,0,0,0,0,0,0))
+  xhyp2.1 <- make.hyp.data(modeldata=mnlf$modeldata,
+                         customhypname=c("male","age","urban","hc_60m",
+                                         "max_hh_yedu","ill_chronic",
+                                         "ill_malaria",
+                                         "ill_headache",
+                                         "ill_diarrhea","ill_cough",
+                                         "reg_activities_stopped",
+                                         "asset_index2","asset_index3",
+                                         "asset_index4","asset_index5"),
+                         customhypval= c(1,0,0,0,8.6,0,1,0,0,0,1,0,0,0,0))
+    xhyp3.1 <- make.hyp.data(modeldata=mnlf$modeldata,
+                         customhypname=c("male","age","urban","hc_60m",
+                                         "max_hh_yedu","ill_chronic",
+                                         "ill_malaria",
+                                         "ill_headache",
+                                         "ill_diarrhea","ill_cough",
+                                         "reg_activities_stopped",
+                                         "asset_index2","asset_index3",
+                                         "asset_index4","asset_index5"),
+                         customhypval= c(0,5,0,0,8.6,0,0,0,0,1,0,0,0,0,0))
+    xhyp4.1 <- make.hyp.data(modeldata=mnlf$modeldata,
+                         customhypname=c("male","age","urban","hc_60m",
+                                         "max_hh_yedu","ill_chronic",
+                                         "ill_malaria",
+                                         "ill_headache",
+                                         "ill_diarrhea","ill_cough",
+                                         "reg_activities_stopped",
+                                         "asset_index2","asset_index3",
+                                         "asset_index4","asset_index5"),
+                         customhypval= c(0,25,0,0,8.6,0,0,0,0,0,0,0,0,0,0))
+    xhyp5.1 <- make.hyp.data(modeldata=mnlf$modeldata,
+                         customhypname=c("male","age","urban","hc_60m",
+                                         "max_hh_yedu","ill_chronic",
+                                         "ill_malaria",
+                                         "ill_headache",
+                                         "ill_diarrhea","ill_cough",
+                                         "reg_activities_stopped",
+                                         "asset_index2","asset_index3",
+                                         "asset_index4","asset_index5"),
+                         customhypval= c(1,40,0,0,8.6,1,0,0,0,0,1,0,0,0,0))
+  
+
+    
+  # change base xhyps for different scenarios
+    #2
+  for(i in 1:5) {
+    tmp=get(paste0('xhyp',i,'.1'))
+    tmp$asset_index2=1
+        tmp$hc_60m=1
+
+    tmp$max_hh_yedu=9.3
+    assign((paste0('xhyp',i,'.2')),tmp)  
+  }
+    #3
+  for(i in 1:5) {
+    tmp=get(paste0('xhyp',i,'.2'))
+    #tmp$asset_index2=0
+    tmp$hc_60m=1
+    tmp$asset_index3=1
+    tmp$max_hh_yedu=10
+    assign((paste0('xhyp',i,'.3')),tmp)  
+  }    
+    #4
+  for(i in 1:5) {
+    tmp=get(paste0('xhyp',i,'.3'))
+    #tmp$asset_index3=0
+    tmp$asset_index4=1
+    tmp$max_hh_yedu=10.8
+    tmp$urban = 1
+    assign((paste0('xhyp',i,'.4')),tmp)  
+  }  
+    #5
+  for(i in 1:5) {
+    tmp=get(paste0('xhyp',i,'.4'))
+    #tmp$asset_index4=0
+    tmp$asset_index5=1
+    tmp$max_hh_yedu=11.5
+    tmp$urban = 1
+    assign((paste0('xhyp',i,'.5')),tmp)  
+  }  
+@
+
+
+
+
+
+
+%%%%%%%%%%% TITLE PAGE %%%%%%%%%%% 
+
+
+\title{Facility-based healthcare-seeking behavior among those reporting illness or injury in Nigeria}
+\author{IHME, University of Washington}
+
+\maketitle
+
+We modelled healthcare-seeking behavior in Nigeria using data from a large national household-based survey conducted in 2009. Data were collected on 25,460 individuals who reported being ill or injured at some point in the past two weeks. The survey further collected information about the demographics, socio-economic status (including educational attainment and wealth measured as assets owned by the household), symptoms present and symptom severity. To see a detailed description of the data, analyses, and results, please refer to the annex at the end of this document. \\\
+
+Main findings:
+\begin{itemize}
+\item Severity of illness was consistently the strongest predictor of seeking facility-based care.
+\item The overall likelihood of facility-based utilization increased with increasing education, wealth, and urbanicity.
+\item Younger respondents and females were more likely to receive facility-based care than older respondents and males.
+\item Increasing education and wealth were associated with the substition of care from public facilities to care in private facilities, especially private hospitals.
+\item Children were much more likely to attend public PHCs than adults. 
+\item Patients in rural areas were more likely to utilize public PHCs than those in urban areas.
+\item Patients in areas with easier access to health facilities (ie a health facility within an hour of the household) were much more likely to seek care at a facility than those with lower physical access.
+
+\end{itemize}
+
+
+The following table shows the raw utilization distribution of facility choice from the data:
+
+
+
+<<lss_model_covariates_summstatsoutcomes, echo=FALSE, warning=FALSE, results='asis'>>=
+
+undup <- dat[!duplicated(dat$pid),]
+x<-round(table(undup$fac_type1)/sum(table(undup$fac_type1))*100,1)
+x<-x[!names(x)%in%c('Home','PPMV')]
+res2<-as.matrix(paste0(x,'%'))
+rownames(res2)<-simulatedbetasf$altnames
+colnames(res2)<-"Relative Frequencies"
+
+rownames(res2)[rownames(res2)=="PuPHC"] ="Public PHC"
+rownames(res2)[rownames(res2)=="PrPHC"]= "Private PHC"
+rownames(res2)[rownames(res2)=="Nocare"]="No facility-based care*"
+rownames(res2)[rownames(res2)=="PuHosp"]="Public Hospital"
+rownames(res2)[rownames(res2)=="PrHosp"]="Private Hospital"
+
+print(xtable(res2,table.placement="H", 
+             caption="\\textit{Distribution of Facility choice.\\\\ *No care category includes all respondents reporting an illness or injury in the past two weeks and either did nothing, went only to a pharmacy or PPMV, went to a traditional healer, or had home-based care.}",
+             label='sumstatf'),include.rownames=T)
+
+
+@
+
+
+
+To best understand how healthcare seeking may change as a result of mutable factors, we can hold constant all model covariates except for a few of interest and investigate how the probability of facility-based utilization changes as we incrementally modulate the values of these covariates. It it useful to think about this both from a population and an individual perspective. In both cases, we can use our fitted model to predict how utilization patterns may change under different hypothetical futures. \\\
+
+From the population perspective, we can imagine hypothetical futures where wealth, educational attainment, population density, and geographical access were distributed differently amongst the population. We are interested to see how utilization patterns look in these hypothetical futures. To do this, we first take our sampled population and using the estimated model coefficients, estimate the utilization probabilities of care seeking at different facilities for each survey respondent. Then, holding constant all attributes except the one of interest, we can modulate those attributes we wish to investigate in certain segments of the population and see how the overall utilization probabilities change at a population level. We call this a counterfactual analysis. For example, consider wealth: the sampled population is divided into 5 quantiles (quintiles) of wealth, as measured by how many assets the households own. We can test what will happen to the population average probabilities of utilization if all the people in the poorest quintile were as wealthy as those in the second poorest, and then if all those people were then as wealthy as those in third, and so on. The resulting probabilities represent how we might expect utilization patterns to change as the population becomes incrementally more wealthy, while also showing the isolated effect of wealth on utilization. Likewise, we can see how utilization changes as years of household educational attainment increase. According to our GBD forecasts, we expect educational attainment to increase from 8.6 years in 2010 to 11.5 years in 2030. Again, we can test the expected change in population-level utilization patterns would be given this type of increase in educational attainment. Finally, we will also look at the effect of living in an urban versus a rural area, as well as the affect of improved physical access to care (measured here as living less than an hour from the nearest health facility). We explore the results of these population-level counterfactual analyses in the following pages. \\\
+
+The bar heights represent the average estimated probability of facility-based utilization, given illness or injury. ``No Care'' in this case represents any of the following: no care sought, went to a pharmacy or PPMV, traditional healer, or home-based care. Within the proportion of those expected to utilize, we break down utilization into privately (Pr) and publically (Pu) provided at a Primary Health Center (PHC) or hospital (Hosp).
+
+\pagebreak
+  
+  
+
+<<pop_cf_setup1, include=FALSE>>=
+
+  # get model data (treated as xhyp)
+  d<-mnlf$modeldata
+  
+  # baseline
+  baseline=colMeans(predict(mnlf$model,newdata=d))
+  
+  # increment wealth
+    d$asset_index2[rowSums(cbind(d$asset_index2,d$asset_index3,d$asset_index4,d$asset_index5))==0]=1
+  wealth2=colMeans(predict(mnlf$model,newdata=d))
+    d$asset_index3[d$asset_index2==1]=1
+    d$asset_index2=0
+  wealth3=colMeans(predict(mnlf$model,newdata=d))
+    d$asset_index4[d$asset_index3==1]=1
+    d$asset_index3=0
+  wealth4=colMeans(predict(mnlf$model,newdata=d))
+    d$asset_index5[d$asset_index4==1]=1
+    d$asset_index4=0
+  wealth5=colMeans(predict(mnlf$model,newdata=d))
+  
+@
+
+<<wealthplots, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',capT="\\textit{The first scenario (left) is the baseline case - showing the estimated average utilization pattern given the data from the survey - with a full wealth distribution. The following plots show how, based on the model, we expect utilization patterns to change as the poorest begin to improve their wealth, until the last plot (right) where we show the average expected distribution across our sampled population under the counterfactual that the entire population is equal in wealth to the wealthiest quintile from the survey. Note that we hold all other covariates equal to isolate the contribution of only improved wealth in this population.}",fig.lp='fig:'>>=
+   
+    # PLOT  
+  library(gridExtra)
+  library(png)
+  
+  grid.arrange(stbar(res=baseline, "Observed\nWealth\nDistribution",s=3.2,titlesize=8), 
+                stbar(res=wealth2, "Poorest quint.\nshifted to\n2nd quint.",s=3.2,titlesize=8),
+                stbar(res=wealth3, "Poorest 2 quints.\nshifted to 3rd\n",s=3.2,titlesize=8),
+                stbar(res=wealth4, "Poorest 3 quints.\nshifted to 4th\n",s=3.2,titlesize=8),
+                stbar(res=wealth5, "All in \ntop Wealth\nquint.",s=3.2,titlesize=8),
+                ncol=5)
+ 
+ 
+@
+
+
+Key Takeaways:
+
+\begin{itemize}
+\item Wealth increases total utilization, but only slightly.
+\item As more people become wealthy, we see substitution of providers - away from public and toward the private, especially hospitals.
+\end{itemize}
+
+
+
+
+\pagebreak
+
+<<pop_cf_setup2, include=FALSE>>=
+
+  # get model data (treated as xhyp)
+  d<-mnlf$modeldata
+  
+  # baseline
+  baseline=colMeans(predict(mnlf$model,newdata=d))
+  
+  # increment edu
+    d$max_hh_yedu[d$max_hh_yedu<11.5]=11.5
+  edu5=colMeans(predict(mnlf$model,newdata=d))
+
+  
+  
+@
+
+
+<<eduplots, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',capT="\\textit{According to GBD projections, we expect most households to have at least one person who has acheived at least 11.5 years of education. In this plot, we show the expected contribution this increase in educational attainment has on utilization patterns. Note that we hold all other covariates equal to isolate the contribution of improved educational attainment in this population.}",fig.lp='fig:'>>=
+   
+    # PLOT  
+  library(gridExtra)
+
+  grid.arrange(stbar(res=baseline, "Baseline:\nObserved distribution\n\n",s=3.2,titlesize=10), 
+                stbar(res=edu5, "2030:\nAll households have a \nmemberwith at least 11.5 \nyears of education",s=3.2,titlesize=10),
+                ncol=2)
+ 
+ 
+@
+
+
+Key Takeaways:
+
+\begin{itemize}
+\item We see a small incremental increase in total utilization (2\%).
+\item More education is associated with substitution of care away from public and toward private facilities, especially private hospitals.
+\end{itemize}
+
+
+\pagebreak
+
+
+<<pop_cf_setup3, include=FALSE>>=
+
+  # get model data (treated as xhyp)
+  d<-mnlf$modeldata
+  
+  # baseline
+  baseline=colMeans(predict(mnlf$model,newdata=d))
+  
+  # increment acces
+    d$hc_60m=1
+  baseline.hi.access=colMeans(predict(mnlf$model,newdata=d))
+  d<-mnlf$modeldata
+    d$urban=1
+  baseline.urban=colMeans(predict(mnlf$model,newdata=d))
+    d$urban=0
+  baseline.rural=colMeans(predict(mnlf$model,newdata=d))
+  
+  
+@
+
+
+<<accesplots, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',capT="\\textit{These plots show how urbanization and improved physical access to facilities affect predicted utilization patterns. The first bar shows our baseline data. We then see how this distribution changes if all houeshold were in a rural or urban area. The final bar shows how increasing physical access (putting a facility within an hour of every household) affects utilization paterns.}",fig.lp='fig:'>>=
+   
+    # PLOT  
+  library(gridExtra)
+
+  grid.arrange(stbar(res=baseline, "Baseline:\nObserved distribution\nof access and\nurbanicity\n",s=3.2,titlesize=8), 
+               stbar(res=baseline.rural,"Rural:\nAll HHs in rural area\n\n\n",s=3.2,titlesize=8),
+               stbar(res=baseline.urban,"Urban:\nAll HHs in urban area\n\n\n",s=3.2,titlesize=8),
+               stbar(res=baseline.hi.access,"Hi Access:\nObserved distribution\nof urbanicity but\nall HHs within 1 hr\nof a facility",s=3.2,titlesize=8),
+                ncol=4)
+ 
+ 
+@
+
+
+Key Takeaways:
+
+\begin{itemize}
+\item Compared to rural households, urban households are less likely to visit a Public PHC and more likely to go to a public hospital, and slightly more likely to seek facility based care overall.
+\item Physical access alone does not seem to affect utilization much from baseline, even though only about 80\% of households reported living within an hour of a health facility.
+\end{itemize}
+
+\pagebreak
+
+
+
+
+
+
+
+It is also of interest to see how individual utilization patterns respond to changes in wealth, education, access, and urbanicity. To examine this, we selected five archetypal hypothetical individual patients and estimated their patterns of utilization under these changing variables. The archetypes are as follows:
+
+\begin{enumerate}
+  \item{Newborn female with diarrhea}
+  \item{Newborn male with severe malaria}
+  \item{5 year old female with cough}
+  \item{25 year old female with unknown symptoms}
+  \item{40 year old male with severe symptoms from diabetes}
+\end{enumerate}
+
+For each of these hypothetical patients, we looked at their predicted utilization under five scenarios. Each scenario places each hypothetical patient in a different situtuation in terms of socio-economic status, location, and geographical access to health care. The five scenarios are described in the table below:
+
+
+\begin{table}[H]
+\centering
+\caption{\textit{Access and SES scenarios for each hypothetical individual.}}
+\label{my-label}
+\begin{tabular}{c|cccc}
+Scenario & Years of Education & Wealth Quintile & Urban/Rural & Proximity to a facility  \\
+1        & 8.6                & 1               & Rural       & greater than 60 minutes  \\
+2        & 9.3                & 2               & Rural       & greater than 60 minutes  \\
+3        & 10                 & 3               & Rural       & less than 60 minutes     \\
+4        & 10.8               & 4               & Urban       & less than 60 minutes     \\
+5        & 11.5               & 5               & Urban       & less than 60 minutes     
+\end{tabular}
+\end{table}
+
+We present results in the following pages. Plots can be interpretted in the same way as the population-level analysis.
+
+\pagebreak
+
+<<hyp1plots, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',capT="\\textit{Five scenarios for hypothetical patient 1: Newborn female with diarrhea.}",fig.lp='fig:'>>=
+ 
+  # PLOT  
+  library(gridExtra)
+  library(png)
+  #img <- readPNG("./code/knitr/arrow.png")
+  img <- readPNG("arrow.png")
+  g <- rasterGrob(img, interpolate=TRUE)
+
+ grid.arrange(arrangeGrob(g,arrangeGrob(
+              stbar(res=mlogitsim(x=xhyp1.1,b=simulatedbetasf),"Scenario 1",s=3.2,titlesize=12), 
+              stbar(res=mlogitsim(x=xhyp1.2,b=simulatedbetasf),"Scenario 2",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp1.3,b=simulatedbetasf),"Scenario 3",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp1.4,b=simulatedbetasf),"Scenario 4",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp1.5,b=simulatedbetasf),"Scenario 5",s=3.2,titlesize=12),
+              ncol=5),
+              nrow=2,heights=c(1/8,7/8)))
+
+@
+
+Key Takeaways:
+
+\begin{itemize}
+\item Relative to some of the other hypothetical patients, newborns with diarhhea are much more likely to get care in either public or private PHCs. 
+\item Very low utilization overall, especially in the lower scenarios.
+\item Compared to the population-level estimates where we only changed one variable at a time (which is unlikely in real-life), changing several of the covariates of interest concurrently leads to large an interesting shifts in utilization patterns.
+\end{itemize}
+
+\pagebreak
+
+
+<<hyp2plots, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',capT="\\textit{Five scenarios for hypothetical patient 2: Newborn male with malaria (severe).}",fig.lp='fig:'>>=
+ 
+  # PLOT  
+ grid.arrange(arrangeGrob(g,arrangeGrob(
+   stbar(res=mlogitsim(x=xhyp2.1,b=simulatedbetasf),"Scenario 1",s=3.2,titlesize=12), 
+              stbar(res=mlogitsim(x=xhyp2.2,b=simulatedbetasf),"Scenario 2",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp2.3,b=simulatedbetasf),"Scenario 3",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp2.4,b=simulatedbetasf),"Scenario 4",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp2.5,b=simulatedbetasf),"Scenario 5",s=3.2,titlesize=12),
+              ncol=5),
+              nrow=2,heights=c(1/8,7/8)))
+
+   
+
+@
+
+Key Takeaways:
+
+\begin{itemize}
+\item Both severe symptoms (regular activities affected) and malaria are strong predictors of utilization.
+\item Much of the difference between scenario 1 and scenario 5 is made up of a huge increase in utilization of private hospitals, and to a lesser extent, private PHCs.
+\item Scenario 4 sees an increase in public hospitals, which then gets replaced in scenario 5 by an increase in private hospitals. 
+\end{itemize}
+
+\pagebreak
+
+<<hyp3plots, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',capT="\\textit{Five scenarios for hypothetical patient 3: Five year old female with cough}",fig.lp='fig:'>>=
+ 
+  # PLOT  
+  grid.arrange(arrangeGrob(g,arrangeGrob(
+              stbar(res=mlogitsim(x=xhyp3.1,b=simulatedbetasf),"Scenario 1",s=3.2,titlesize=12), 
+              stbar(res=mlogitsim(x=xhyp3.2,b=simulatedbetasf),"Scenario 2",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp3.3,b=simulatedbetasf),"Scenario 3",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp3.4,b=simulatedbetasf),"Scenario 4",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp3.5,b=simulatedbetasf),"Scenario 5",s=3.2,titlesize=12),
+              ncol=5),
+              nrow=2,heights=c(1/8,7/8)))
+
+   
+
+@
+
+Key Takeaways:
+
+\begin{itemize}
+\item Very low utilization overall.
+
+\end{itemize}
+
+\pagebreak
+
+<<hyp4plots, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',capT="\\textit{Five scenarios for hypothetical patient 4: 25 year-old female with unknown symptoms.}",fig.lp='fig:'>>=
+ 
+  # PLOT  
+ grid.arrange(arrangeGrob(g,arrangeGrob(
+              stbar(res=mlogitsim(x=xhyp4.1,b=simulatedbetasf),"Scenario 1",s=3.2,titlesize=12), 
+              stbar(res=mlogitsim(x=xhyp4.2,b=simulatedbetasf),"Scenario 2",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp4.3,b=simulatedbetasf),"Scenario 3",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp4.4,b=simulatedbetasf),"Scenario 4",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp4.5,b=simulatedbetasf),"Scenario 5",s=3.2,titlesize=12),
+              ncol=5),
+              nrow=2,heights=c(1/8,7/8)))
+
+   
+
+@
+Key Takeaways:
+
+\begin{itemize}
+\item Very low utilization overall.
+\item Low utilization of PHCs relative to hospitals.
+\end{itemize}
+
+\pagebreak
+
+<<hyp5plots, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',capT="\\textit{Five scenarios for hypothetical patient 5: 40 year-old male with severe diabetes-related symptoms}",fig.lp='fig:'>>=
+ 
+  # PLOT  
+ grid.arrange(arrangeGrob(g,arrangeGrob(
+              stbar(res=mlogitsim(x=xhyp5.1,b=simulatedbetasf),"Scenario 1",s=3.2,titlesize=12), 
+              stbar(res=mlogitsim(x=xhyp5.2,b=simulatedbetasf),"Scenario 2",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp5.3,b=simulatedbetasf),"Scenario 3",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp5.4,b=simulatedbetasf),"Scenario 4",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp5.5,b=simulatedbetasf),"Scenario 5",s=3.2,titlesize=12),
+              ncol=5),
+              nrow=2,heights=c(1/8,7/8)))
+
+   
+
+@
+
+\begin{itemize}
+\item Very high utilization for severe symptoms of chronic disease.
+\item Almost all care is from hospitals - public in the lower scenarios, being substituted by private hospitals in the higher scenarios. 
+\end{itemize}
+
+
+\pagebreak
+
+\section*{Annex: Methodology and Model Results}
+
+
+We modelled the probability of utilization as well as the the probabilities of utilizing specific types of health facilities/providers using multinomial logistic regression. These models are used to analyze data with categorical outcomes, thus helping answer ``what'', ``which'', ``who'', and ``where'' questions, rather than ``how much'' or ``how many'' questions. For this analysis, we always have a nominal categorical response, whether it be utilization (alternatives: ``yes'' or ``no'') or type of facility (example alternative: ``hospital'', ``PHC'', ``No care''). As such, logistic regression for binomial outcomes is simply a specific case of this model. We can ask which characteristics of individual healthcare consumers help predict certain behaviors. These characteristics can include demographic variables such as age, and gender, as well as socio-economic variables such as years of educational attainment, and diagnostic or symptomatic indicators for common conditions such as diarrhea or fever. The models assume that individuals will tend to choose the alternative which maximizes their utility, given the covariates. We fit each model to actual data on reported individual choices from the datasets.    \\\
+
+We describe the model here we use a general notation. An indivual, $i$, is faced with alternatives numbered $1,...j,...M$. Alternative 1 is the  reference alternative, with coefficients assumed to be $0$ for this alternative. Covariates $x_1,...x_k,...x_P$ describe each individual. Parameters are estimated for each combination of non-reference alternative and a covariate, along with an intercept for each non-reference alternative. We can just think of the mean function like any other linear regression where the mean for any  $\boldsymbol{\mu_j}=\text{\textbf{X}}\boldsymbol{\beta_j}$, where again, there are $(M-1)*(P+1)$ coefficients ($\beta$) estimated. Since we are interested in estimating the probability of each alternative $j$ for each individual $i$, we use the inverse-logit function, which ensures we have results which are positive and sum to 1:
+
+$$ Pr(y_i=j|x_i,\boldsymbol{\beta}) = \frac{e^{x_i\beta_j}}{\Sigma_{m=1}^M e^{x_i\beta_m}} $$ 
+
+This probability equation is generalizable for any number of alternatives. Though this does lead to a large number of coefficients, these can be interpretted somewhat naturally. The exponentiated coefficent for any alternative $m$ gives the incremental odds of choosing category $m$ relative to the reference category, given a unit increase in $x$. To generalize this, we can say that for any counterfactual level of $x_c$, the odds of choosing alternative $m$ over alternative $n$ would be $e^{x_c*(\beta_m-\beta_n)}$. \\\
+
+The most straighforward and intuitive way to interpret results from these models is to compare the predicted probabilities that arise from two counterfactual sets of covariates. For example, we could look at the difference in probability of utilization between a 10 year old girl with pneumonia compared to a 1 year old with diarrhea. Likewise, one may be interested in isolating the effect of say, years of education. To do this, we can hold all variables constant (typically at their mean level) and vary only education to see how the predicted probabilities change. In order to estimate uncertainty and thus test for significance among predicted probabilities of two hypotheticals, we simulate 1000 draws from the variance-covariance matrix, reporting the mean and 95\% upper and lower confidence bounds.  \\\
+
+There are some limitations to this approach to keep in mind. First, we make the assumption of Independence of Irrelevant Alternatives (IIA). IIA essentially says that the shift between two alternatives, $m$ and $n$ is irrelevant from otheralternatives. In other words, for this analysis we do not make any account for alternatives that may be close substitutes. This assumption can be relaxed with probit models and random-parameter models but we were limited by issues with generalizability, and computation feasibility over many alternatives. Second, due to lack of reliable data across geography, we do not include alternative-specific covariates.  \\\
+
+
+All analysis was done in \textit{R}, the full reproduction code for this analysis can be found at \url{https://github.com/royburst/choice}. \\\\\
+
+
+Description of variables used:
+
+<<lss_model_covariates, echo=FALSE, warning=FALSE, results='asis'>>=
+library(xtable)
+ctable <-data.frame(description=coefs2)
+print(xtable(ctable,table.placement="H", 
+             caption="Covariate names and descriptions.",
+             label='ccccc'),include.rownames=T , tabular.environment = 'longtable')
+@
+
+
+
+
+Below are the estimated coefficients for the model, recall you will see many for the multinomial logit model because we have a coefficient for each covariate-alternative (non-reference) combination. They are identified in the format \textit{alternative}:\textit{covariate}: \\\
+
+<<resultsannex>>=
+print(form)
+round(summary(mnlf$model)$CoefTable,4) 
+@
+
+
+
+
+
+
+
+
+\end{document}
+
+
+
