@@ -250,23 +250,20 @@ data<-read.csv("J:/Project/phc/nga/choice/data/1f_fully_prepped.csv")
 %%%%%%%%%%% TITLE PAGE %%%%%%%%%%% 
 
 
-\title{Facility-based healthcare-seeking behavior among those reporting illness or injury in Nigeria}
+\title{Healthcare-seeking behavior among those reporting illness or injury in Nigeria}
 \author{IHME, University of Washington}
 
 \maketitle
 
-We modelled healthcare-seeking behavior in Nigeria using data from a large national household-based survey conducted in 2009. Data were collected on 25,460 individuals who reported being ill or injured at some point in the past two weeks. The survey further collected information about the demographics, socio-economic status (including educational attainment and wealth measured as assets owned by the household), symptoms present and symptom severity. To see a detailed description of the data, analyses, and results, please refer to the annex at the end of this document. \\\
+We modelled facility-based healthcare-seeking behavior in Nigeria using data from a large national household-based survey conducted in 2009. Data were collected on 25,460 individuals who reported being ill or injured at some point in the past two weeks. The survey further collected information about the demographics, socio-economic status (including educational attainment and wealth measured as assets owned by the household), symptoms present and symptom severity. To see a detailed description of the data, analyses, and results, please refer to the annex at the end of this document. \\\
 
 Main findings:
 \begin{itemize}
-\item Severity of illness was consistently the strongest predictor of seeking facility-based care.
-\item The overall likelihood of facility-based utilization increased with increasing education, wealth, and urbanicity.
-\item Younger respondents and females were more likely to receive facility-based care than older respondents and males.
-\item Increasing education and wealth were associated with the substition of care from public facilities to care in private facilities, especially private hospitals.
-\item Children were much more likely to attend public PHCs than adults. 
-\item Patients in rural areas were more likely to utilize public PHCs than those in urban areas.
-\item Patients in areas with easier access to health facilities (ie a health facility within an hour of the household) were much more likely to seek care at a facility than those with lower physical access.
-
+\item Severity of illness was consistently the strongest predictor of seeking care in a health facility.
+\item The probability of facility-based utilization increased with increasing education, wealth, and urbanicity.
+\item Younger respondents and women were more likely than older respondents and men to receive care at public PHCs. 
+\item Individuals who lived in wealthier, more educated, urban households seek more care in general, but specifically much more care from private facilities, and specifically private hospitals.
+\item Those in middle wealth brackets used more public PHCs than both those in the lowest and highest wealth brackets. 
 \end{itemize}
 
 
@@ -290,7 +287,7 @@ rownames(res2)[rownames(res2)=="PuHosp"]="Public Hospital"
 rownames(res2)[rownames(res2)=="PrHosp"]="Private Hospital"
 
 print(xtable(res2,table.placement="H", 
-             caption="\\textit{Distribution of Facility choice.\\\\ *No care category includes all respondents reporting an illness or injury in the past two weeks and either did nothing, went only to a pharmacy or PPMV, went to a traditional healer, or had home-based care.}",
+             caption="\\textit{Distribution of Facility choice.\\\\ *No facility-based care category includes all respondents reporting an illness or injury in the past two weeks and either did nothing, went only to a pharmacy or PPMV, went to a traditional healer, or had home-based care.}",
              label='sumstatf'),include.rownames=T)
 
 
@@ -298,161 +295,9 @@ print(xtable(res2,table.placement="H",
 
 
 
-To best understand how healthcare seeking may change as a result of mutable factors, we can hold constant all model covariates except for a few of interest and investigate how the probability of facility-based utilization changes as we incrementally modulate the values of these covariates. It it useful to think about this both from a population and an individual perspective. In both cases, we can use our fitted model to predict how utilization patterns may change under different hypothetical futures. \\\
+To best understand how healthcare seeking may change as a result of the mutable factors we are interested in, we can hold constant all model covariates except for a few of interest and investigate how the probability of facility-based utilization changes as we incrementally modulate the values of these covariates. Using this approach, we estimate how utilization patterns may change under different hypothetical scenarios. \\\
 
-From the population perspective, we can imagine hypothetical futures where wealth, educational attainment, population density, and geographical access were distributed differently amongst the population. We are interested to see how utilization patterns look in these hypothetical futures. To do this, we first take our sampled population and using the estimated model coefficients, estimate the utilization probabilities of care seeking at different facilities for each survey respondent. Then, holding constant all attributes except the one of interest, we can modulate those attributes we wish to investigate in certain segments of the population and see how the overall utilization probabilities change at a population level. We call this a counterfactual analysis. For example, consider wealth: the sampled population is divided into 5 quantiles (quintiles) of wealth, as measured by how many assets the households own. We can test what will happen to the population average probabilities of utilization if all the people in the poorest quintile were as wealthy as those in the second poorest, and then if all those people were then as wealthy as those in third, and so on. The resulting probabilities represent how we might expect utilization patterns to change as the population becomes incrementally more wealthy, while also showing the isolated effect of wealth on utilization. Likewise, we can see how utilization changes as years of household educational attainment increase. According to our GBD forecasts, we expect educational attainment to increase from 8.6 years in 2010 to 11.5 years in 2030. Again, we can test the expected change in population-level utilization patterns would be given this type of increase in educational attainment. Finally, we will also look at the effect of living in an urban versus a rural area, as well as the affect of improved physical access to care (measured here as living less than an hour from the nearest health facility). We explore the results of these population-level counterfactual analyses in the following pages. \\\
-
-The bar heights represent the average estimated probability of facility-based utilization, given illness or injury. ``No Care'' in this case represents any of the following: no care sought, went to a pharmacy or PPMV, traditional healer, or home-based care. Within the proportion of those expected to utilize, we break down utilization into privately (Pr) and publically (Pu) provided at a Primary Health Center (PHC) or hospital (Hosp).
-
-\pagebreak
-  
-  
-
-<<pop_cf_setup1, include=FALSE>>=
-
-  # get model data (treated as xhyp)
-  d<-mnlf$modeldata
-  
-  # baseline
-  baseline=colMeans(predict(mnlf$model,newdata=d))
-  
-  # increment wealth
-    d$asset_index2[rowSums(cbind(d$asset_index2,d$asset_index3,d$asset_index4,d$asset_index5))==0]=1
-  wealth2=colMeans(predict(mnlf$model,newdata=d))
-    d$asset_index3[d$asset_index2==1]=1
-    d$asset_index2=0
-  wealth3=colMeans(predict(mnlf$model,newdata=d))
-    d$asset_index4[d$asset_index3==1]=1
-    d$asset_index3=0
-  wealth4=colMeans(predict(mnlf$model,newdata=d))
-    d$asset_index5[d$asset_index4==1]=1
-    d$asset_index4=0
-  wealth5=colMeans(predict(mnlf$model,newdata=d))
-  
-@
-
-<<wealthplots, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',capT="\\textit{The first scenario (left) is the baseline case - showing the estimated average utilization pattern given the data from the survey - with a full wealth distribution. The following plots show how, based on the model, we expect utilization patterns to change as the poorest begin to improve their wealth, until the last plot (right) where we show the average expected distribution across our sampled population under the counterfactual that the entire population is equal in wealth to the wealthiest quintile from the survey. Note that we hold all other covariates equal to isolate the contribution of only improved wealth in this population.}",fig.lp='fig:'>>=
-   
-    # PLOT  
-  library(gridExtra)
-  library(png)
-  
-  grid.arrange(stbar(res=baseline, "Observed\nWealth\nDistribution",s=3.2,titlesize=8), 
-                stbar(res=wealth2, "Poorest quint.\nshifted to\n2nd quint.",s=3.2,titlesize=8),
-                stbar(res=wealth3, "Poorest 2 quints.\nshifted to 3rd\n",s=3.2,titlesize=8),
-                stbar(res=wealth4, "Poorest 3 quints.\nshifted to 4th\n",s=3.2,titlesize=8),
-                stbar(res=wealth5, "All in \ntop Wealth\nquint.",s=3.2,titlesize=8),
-                ncol=5)
- 
- 
-@
-
-
-Key Takeaways:
-
-\begin{itemize}
-\item Wealth increases total utilization, but only slightly.
-\item As more people become wealthy, we see substitution of providers - away from public and toward the private, especially hospitals.
-\end{itemize}
-
-
-
-
-\pagebreak
-
-<<pop_cf_setup2, include=FALSE>>=
-
-  # get model data (treated as xhyp)
-  d<-mnlf$modeldata
-  
-  # baseline
-  baseline=colMeans(predict(mnlf$model,newdata=d))
-  
-  # increment edu
-    d$max_hh_yedu[d$max_hh_yedu<11.5]=11.5
-  edu5=colMeans(predict(mnlf$model,newdata=d))
-
-  
-  
-@
-
-
-<<eduplots, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',capT="\\textit{According to GBD projections, we expect most households to have at least one person who has acheived at least 11.5 years of education. In this plot, we show the expected contribution this increase in educational attainment has on utilization patterns. Note that we hold all other covariates equal to isolate the contribution of improved educational attainment in this population.}",fig.lp='fig:'>>=
-   
-    # PLOT  
-  library(gridExtra)
-
-  grid.arrange(stbar(res=baseline, "Baseline:\nObserved distribution\n\n",s=3.2,titlesize=10), 
-                stbar(res=edu5, "2030:\nAll households have a \nmemberwith at least 11.5 \nyears of education",s=3.2,titlesize=10),
-                ncol=2)
- 
- 
-@
-
-
-Key Takeaways:
-
-\begin{itemize}
-\item We see a small incremental increase in total utilization (2\%).
-\item More education is associated with substitution of care away from public and toward private facilities, especially private hospitals.
-\end{itemize}
-
-
-\pagebreak
-
-
-<<pop_cf_setup3, include=FALSE>>=
-
-  # get model data (treated as xhyp)
-  d<-mnlf$modeldata
-  
-  # baseline
-  baseline=colMeans(predict(mnlf$model,newdata=d))
-  
-  # increment acces
-    d$hc_60m=1
-  baseline.hi.access=colMeans(predict(mnlf$model,newdata=d))
-  d<-mnlf$modeldata
-    d$urban=1
-  baseline.urban=colMeans(predict(mnlf$model,newdata=d))
-    d$urban=0
-  baseline.rural=colMeans(predict(mnlf$model,newdata=d))
-  
-  
-@
-
-
-<<accesplots, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',capT="\\textit{These plots show how urbanization and improved physical access to facilities affect predicted utilization patterns. The first bar shows our baseline data. We then see how this distribution changes if all houeshold were in a rural or urban area. The final bar shows how increasing physical access (putting a facility within an hour of every household) affects utilization paterns.}",fig.lp='fig:'>>=
-   
-    # PLOT  
-  library(gridExtra)
-
-  grid.arrange(stbar(res=baseline, "Baseline:\nObserved distribution\nof access and\nurbanicity\n",s=3.2,titlesize=8), 
-               stbar(res=baseline.rural,"Rural:\nAll HHs in rural area\n\n\n",s=3.2,titlesize=8),
-               stbar(res=baseline.urban,"Urban:\nAll HHs in urban area\n\n\n",s=3.2,titlesize=8),
-               stbar(res=baseline.hi.access,"Hi Access:\nObserved distribution\nof urbanicity but\nall HHs within 1 hr\nof a facility",s=3.2,titlesize=8),
-                ncol=4)
- 
- 
-@
-
-
-Key Takeaways:
-
-\begin{itemize}
-\item Compared to rural households, urban households are less likely to visit a Public PHC and more likely to go to a public hospital, and slightly more likely to seek facility based care overall.
-\item Physical access alone does not seem to affect utilization much from baseline, even though only about 80\% of households reported living within an hour of a health facility.
-\end{itemize}
-
-\pagebreak
-
-
-
-
-
-
-
-It is also of interest to see how individual utilization patterns respond to changes in wealth, education, access, and urbanicity. To examine this, we selected five archetypal hypothetical individual patients and estimated their patterns of utilization under these changing variables. The archetypes are as follows:
+To examine this how individual utilization patterns may respond to changes in wealth, education, access, and urbanicity, we selected five archetypal hypothetical individual patients and estimated their patterns of utilization under various scenarios. The archetypes are as follows:
 
 \begin{enumerate}
   \item{Newborn female with diarrhea}
@@ -462,24 +307,25 @@ It is also of interest to see how individual utilization patterns respond to cha
   \item{40 year old male with severe symptoms from diabetes}
 \end{enumerate}
 
-For each of these hypothetical patients, we looked at their predicted utilization under five scenarios. Each scenario places each hypothetical patient in a different situtuation in terms of socio-economic status, location, and geographical access to health care. The five scenarios are described in the table below:
 
+We can imagine hypothetical futures for each patient where wealth, educational attainment, population density, and geographical are different but symptoms and demographic characteristics stay the same. We are interested in seeing how these patients' utilization patterns change given different SES and physical access. For each of these hypothetical patients, we looked at their predicted utilization under five scenarios. Each scenario places each hypothetical patient in a different situtuation in terms of socio-economic status, location, and geographical access to health care. The five scenarios are described in the table below:
 
 \begin{table}[H]
 \centering
-\caption{\textit{Access and SES scenarios for each hypothetical individual.}}
 \label{my-label}
 \begin{tabular}{c|cccc}
-Scenario & Years of Education & Wealth Quintile & Urban/Rural & Proximity to a facility  \\
+Scenario & Years of Education* & Wealth Quintile & Urban/Rural & Proximity to a facility  \\ \hline
 1        & 8.6                & 1               & Rural       & greater than 60 minutes  \\
 2        & 9.3                & 2               & Rural       & greater than 60 minutes  \\
 3        & 10                 & 3               & Rural       & less than 60 minutes     \\
 4        & 10.8               & 4               & Urban       & less than 60 minutes     \\
 5        & 11.5               & 5               & Urban       & less than 60 minutes     
 \end{tabular}
+\caption{\textit{Access and SES scenarios for each hypothetical individual.\n*Education years values were chosen based on the GBD forecasts for Nigeria for 2010,2015,2020,2025, and 2030.}}
 \end{table}
 
-We present results in the following pages. Plots can be interpretted in the same way as the population-level analysis.
+
+We present results in the following pages. The bar heights represent the average estimated probability of facility-based utilization, given illness or injury. ``No facility-based care'' in this case represents any of the following: no care sought, went to a pharmacy or PPMV, traditional healer, or home-based care. Within the proportion of those expected to utilize, we break down utilization into privately (Pr) and publically (Pu) provided at a Primary Health Center (PHC) or hospital (Hosp).
 
 \pagebreak
 
@@ -493,11 +339,11 @@ We present results in the following pages. Plots can be interpretted in the same
   g <- rasterGrob(img, interpolate=TRUE)
 
  grid.arrange(arrangeGrob(g,arrangeGrob(
-              stbar(res=mlogitsim(x=xhyp1.1,b=simulatedbetasf),"Scenario 1",s=3.2,titlesize=12), 
-              stbar(res=mlogitsim(x=xhyp1.2,b=simulatedbetasf),"Scenario 2",s=3.2,titlesize=12),
-              stbar(res=mlogitsim(x=xhyp1.3,b=simulatedbetasf),"Scenario 3",s=3.2,titlesize=12),
-              stbar(res=mlogitsim(x=xhyp1.4,b=simulatedbetasf),"Scenario 4",s=3.2,titlesize=12),
-              stbar(res=mlogitsim(x=xhyp1.5,b=simulatedbetasf),"Scenario 5",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp1.1,b=simulatedbetasf),"Scenario 1",s=3.0,titlesize=12), 
+              stbar(res=mlogitsim(x=xhyp1.2,b=simulatedbetasf),"Scenario 2",s=3.0,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp1.3,b=simulatedbetasf),"Scenario 3",s=3.0,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp1.4,b=simulatedbetasf),"Scenario 4",s=3.0,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp1.5,b=simulatedbetasf),"Scenario 5",s=3.0,titlesize=12),
               ncol=5),
               nrow=2,heights=c(1/8,7/8)))
 
@@ -506,9 +352,8 @@ We present results in the following pages. Plots can be interpretted in the same
 Key Takeaways:
 
 \begin{itemize}
-\item Relative to some of the other hypothetical patients, newborns with diarhhea are much more likely to get care in either public or private PHCs. 
-\item Very low utilization overall, especially in the lower scenarios.
-\item Compared to the population-level estimates where we only changed one variable at a time (which is unlikely in real-life), changing several of the covariates of interest concurrently leads to large an interesting shifts in utilization patterns.
+\item Relative to some of the other hypothetical patients, newborns with diarrhea are much more likely to get care in either public or private PHCs. 
+\item Very low utilization overall, especially in the lower scenarios where utilization of private facility-based care is very low.
 \end{itemize}
 
 \pagebreak
@@ -518,11 +363,11 @@ Key Takeaways:
  
   # PLOT  
  grid.arrange(arrangeGrob(g,arrangeGrob(
-   stbar(res=mlogitsim(x=xhyp2.1,b=simulatedbetasf),"Scenario 1",s=3.2,titlesize=12), 
-              stbar(res=mlogitsim(x=xhyp2.2,b=simulatedbetasf),"Scenario 2",s=3.2,titlesize=12),
-              stbar(res=mlogitsim(x=xhyp2.3,b=simulatedbetasf),"Scenario 3",s=3.2,titlesize=12),
-              stbar(res=mlogitsim(x=xhyp2.4,b=simulatedbetasf),"Scenario 4",s=3.2,titlesize=12),
-              stbar(res=mlogitsim(x=xhyp2.5,b=simulatedbetasf),"Scenario 5",s=3.2,titlesize=12),
+   stbar(res=mlogitsim(x=xhyp2.1,b=simulatedbetasf),"Scenario 1",s=3.0,titlesize=12), 
+              stbar(res=mlogitsim(x=xhyp2.2,b=simulatedbetasf),"Scenario 2",s=3.0,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp2.3,b=simulatedbetasf),"Scenario 3",s=3.0,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp2.4,b=simulatedbetasf),"Scenario 4",s=3.0,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp2.5,b=simulatedbetasf),"Scenario 5",s=3.0,titlesize=12),
               ncol=5),
               nrow=2,heights=c(1/8,7/8)))
 
@@ -535,7 +380,7 @@ Key Takeaways:
 \begin{itemize}
 \item Both severe symptoms (regular activities affected) and malaria are strong predictors of utilization.
 \item Much of the difference between scenario 1 and scenario 5 is made up of a huge increase in utilization of private hospitals, and to a lesser extent, private PHCs.
-\item Scenario 4 sees an increase in public hospitals, which then gets replaced in scenario 5 by an increase in private hospitals. 
+\item Scenario 4 sees an increase in public hospitals, which then gets largely replaced in scenario 5 by an increase in private hospitals. 
 \end{itemize}
 
 \pagebreak
@@ -544,11 +389,11 @@ Key Takeaways:
  
   # PLOT  
   grid.arrange(arrangeGrob(g,arrangeGrob(
-              stbar(res=mlogitsim(x=xhyp3.1,b=simulatedbetasf),"Scenario 1",s=3.2,titlesize=12), 
-              stbar(res=mlogitsim(x=xhyp3.2,b=simulatedbetasf),"Scenario 2",s=3.2,titlesize=12),
-              stbar(res=mlogitsim(x=xhyp3.3,b=simulatedbetasf),"Scenario 3",s=3.2,titlesize=12),
-              stbar(res=mlogitsim(x=xhyp3.4,b=simulatedbetasf),"Scenario 4",s=3.2,titlesize=12),
-              stbar(res=mlogitsim(x=xhyp3.5,b=simulatedbetasf),"Scenario 5",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp3.1,b=simulatedbetasf),"Scenario 1",s=3.0,titlesize=12), 
+              stbar(res=mlogitsim(x=xhyp3.2,b=simulatedbetasf),"Scenario 2",s=3.0,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp3.3,b=simulatedbetasf),"Scenario 3",s=3.0,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp3.4,b=simulatedbetasf),"Scenario 4",s=3.0,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp3.5,b=simulatedbetasf),"Scenario 5",s=3.0,titlesize=12),
               ncol=5),
               nrow=2,heights=c(1/8,7/8)))
 
@@ -560,7 +405,7 @@ Key Takeaways:
 
 \begin{itemize}
 \item Very low utilization overall.
-
+\item Again, we see an increase in public hospital utilization in the middle scenario.
 \end{itemize}
 
 \pagebreak
@@ -569,11 +414,11 @@ Key Takeaways:
  
   # PLOT  
  grid.arrange(arrangeGrob(g,arrangeGrob(
-              stbar(res=mlogitsim(x=xhyp4.1,b=simulatedbetasf),"Scenario 1",s=3.2,titlesize=12), 
-              stbar(res=mlogitsim(x=xhyp4.2,b=simulatedbetasf),"Scenario 2",s=3.2,titlesize=12),
-              stbar(res=mlogitsim(x=xhyp4.3,b=simulatedbetasf),"Scenario 3",s=3.2,titlesize=12),
-              stbar(res=mlogitsim(x=xhyp4.4,b=simulatedbetasf),"Scenario 4",s=3.2,titlesize=12),
-              stbar(res=mlogitsim(x=xhyp4.5,b=simulatedbetasf),"Scenario 5",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp4.1,b=simulatedbetasf),"Scenario 1",s=3.0,titlesize=12), 
+              stbar(res=mlogitsim(x=xhyp4.2,b=simulatedbetasf),"Scenario 2",s=3.0,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp4.3,b=simulatedbetasf),"Scenario 3",s=3.0,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp4.4,b=simulatedbetasf),"Scenario 4",s=3.0,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp4.5,b=simulatedbetasf),"Scenario 5",s=3.0,titlesize=12),
               ncol=5),
               nrow=2,heights=c(1/8,7/8)))
 
@@ -584,7 +429,7 @@ Key Takeaways:
 
 \begin{itemize}
 \item Very low utilization overall.
-\item Low utilization of PHCs relative to hospitals.
+\item Compared to many of the other scenarios, the utilization of PHCs (both public and private) relative to hospitals is quite low.
 \end{itemize}
 
 \pagebreak
@@ -593,11 +438,11 @@ Key Takeaways:
  
   # PLOT  
  grid.arrange(arrangeGrob(g,arrangeGrob(
-              stbar(res=mlogitsim(x=xhyp5.1,b=simulatedbetasf),"Scenario 1",s=3.2,titlesize=12), 
-              stbar(res=mlogitsim(x=xhyp5.2,b=simulatedbetasf),"Scenario 2",s=3.2,titlesize=12),
-              stbar(res=mlogitsim(x=xhyp5.3,b=simulatedbetasf),"Scenario 3",s=3.2,titlesize=12),
-              stbar(res=mlogitsim(x=xhyp5.4,b=simulatedbetasf),"Scenario 4",s=3.2,titlesize=12),
-              stbar(res=mlogitsim(x=xhyp5.5,b=simulatedbetasf),"Scenario 5",s=3.2,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp5.1,b=simulatedbetasf),"Scenario 1",s=3.0,titlesize=12), 
+              stbar(res=mlogitsim(x=xhyp5.2,b=simulatedbetasf),"Scenario 2",s=3.0,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp5.3,b=simulatedbetasf),"Scenario 3",s=3.0,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp5.4,b=simulatedbetasf),"Scenario 4",s=3.0,titlesize=12),
+              stbar(res=mlogitsim(x=xhyp5.5,b=simulatedbetasf),"Scenario 5",s=3.0,titlesize=12),
               ncol=5),
               nrow=2,heights=c(1/8,7/8)))
 
@@ -606,8 +451,8 @@ Key Takeaways:
 @
 
 \begin{itemize}
-\item Very high utilization for severe symptoms of chronic disease.
-\item Almost all care is from hospitals - public in the lower scenarios, being substituted by private hospitals in the higher scenarios. 
+\item Very high utilization, which is due to the severity of symptoms and the chronic disease.
+\item Almost all care is from hospitals across all the scenarios, but public hospitals are more utilized in the lower scenarios, then being substituted by care from private hospitals in the higher scenarios. 
 \end{itemize}
 
 
@@ -629,7 +474,8 @@ The most straighforward and intuitive way to interpret results from these models
 There are some limitations to this approach to keep in mind. First, we make the assumption of Independence of Irrelevant Alternatives (IIA). IIA essentially says that the shift between two alternatives, $m$ and $n$ is irrelevant from otheralternatives. In other words, for this analysis we do not make any account for alternatives that may be close substitutes. This assumption can be relaxed with probit models and random-parameter models but we were limited by issues with generalizability, and computation feasibility over many alternatives. Second, due to lack of reliable data across geography, we do not include alternative-specific covariates.  \\\
 
 
-All analysis was done in \textit{R}, the full reproduction code for this analysis can be found at \url{https://github.com/royburst/choice}. \\\\\
+All analysis was done in \texttt{R}, the full reproduction code for this analysis can be found at \url{https://github.com/royburst/choice}. \\\\\
+
 
 
 Description of variables used:
@@ -641,6 +487,7 @@ print(xtable(ctable,table.placement="H",
              caption="Covariate names and descriptions.",
              label='ccccc'),include.rownames=T , tabular.environment = 'longtable')
 @
+
 
 
 

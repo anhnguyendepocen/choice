@@ -1,0 +1,147 @@
+\pagebreak
+  
+  
+We can imagine hypothetical futures where wealth, educational attainment, population density, and geographical access change for patients with the same hypothetical demographics and symptoms. We are interested to see how utilization patterns look in these hypothetical futures. To do this, we first take our sampled population and using the estimated model coefficients, estimate the utilization probabilities of care seeking at different facilities for each survey respondent. Then, holding constant all attributes except the one of interest, we can modulate those attributes we wish to investigate in certain segments of the population and see how the overall utilization probabilities change at a population level. We call this a counterfactual analysis. For example, consider wealth: the sampled population is divided into 5 quantiles (quintiles) of wealth, as measured by how many assets the households own. We can test what will happen to the population average probabilities of utilization if all the people in the poorest quintile were as wealthy as those in the second poorest, and then if all those people were then as wealthy as those in third, and so on. The resulting probabilities represent how we might expect utilization patterns to change as the population becomes incrementally more wealthy, while also showing the isolated effect of wealth on utilization. Likewise, we can see how utilization changes as years of household educational attainment increase. According to our GBD forecasts, we expect educational attainment to increase from 8.6 years in 2010 to 11.5 years in 2030. Again, we can test the expected change in population-level utilization patterns would be given this type of increase in educational attainment. Finally, we will also look at the effect of living in an urban versus a rural area, as well as the affect of improved physical access to care (measured here as living less than an hour from the nearest health facility). We explore the results of these population-level counterfactual analyses in the following pages. \\\
+
+
+<<pop_cf_setup1, include=FALSE>>=
+
+  # get model data (treated as xhyp)
+  d<-mnlf$modeldata
+  
+  # baseline
+  baseline=colMeans(predict(mnlf$model,newdata=d))
+  
+  # increment wealth
+    d$asset_index2[rowSums(cbind(d$asset_index2,d$asset_index3,d$asset_index4,d$asset_index5))==0]=1
+  wealth2=colMeans(predict(mnlf$model,newdata=d))
+    d$asset_index3[d$asset_index2==1]=1
+    d$asset_index2=0
+  wealth3=colMeans(predict(mnlf$model,newdata=d))
+    d$asset_index4[d$asset_index3==1]=1
+    d$asset_index3=0
+  wealth4=colMeans(predict(mnlf$model,newdata=d))
+    d$asset_index5[d$asset_index4==1]=1
+    d$asset_index4=0
+  wealth5=colMeans(predict(mnlf$model,newdata=d))
+  
+@
+
+<<wealthplots, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',capT="\\textit{The first scenario (left) is the baseline case - showing the estimated average utilization pattern given the data from the survey - with a full wealth distribution. The following plots show how, based on the model, we expect utilization patterns to change as the poorest begin to improve their wealth, until the last plot (right) where we show the average expected distribution across our sampled population under the counterfactual that the entire population is equal in wealth to the wealthiest quintile from the survey. Note that we hold all other covariates equal to isolate the contribution of only improved wealth in this population.}",fig.lp='fig:'>>=
+   
+    # PLOT  
+  library(gridExtra)
+  library(png)
+  
+  grid.arrange(stbar(res=baseline, "Observed\nWealth\nDistribution",s=3.2,titlesize=8), 
+                stbar(res=wealth2, "Poorest quint.\nshifted to\n2nd quint.",s=3.2,titlesize=8),
+                stbar(res=wealth3, "Poorest 2 quints.\nshifted to 3rd\n",s=3.2,titlesize=8),
+                stbar(res=wealth4, "Poorest 3 quints.\nshifted to 4th\n",s=3.2,titlesize=8),
+                stbar(res=wealth5, "All in \ntop Wealth\nquint.",s=3.2,titlesize=8),
+                ncol=5)
+ 
+ 
+@
+
+
+Key Takeaways:
+
+\begin{itemize}
+\item Wealth increases total utilization, but only slightly.
+\item As more people become wealthy, we see substitution of providers - away from public and toward the private, especially hospitals.
+\end{itemize}
+
+
+
+
+\pagebreak
+
+<<pop_cf_setup2, include=FALSE>>=
+
+  # get model data (treated as xhyp)
+  d<-mnlf$modeldata
+  
+  # baseline
+  baseline=colMeans(predict(mnlf$model,newdata=d))
+  
+  # increment edu
+    d$max_hh_yedu[d$max_hh_yedu<11.5]=11.5
+  edu5=colMeans(predict(mnlf$model,newdata=d))
+
+  
+  
+@
+
+
+<<eduplots, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',capT="\\textit{According to GBD projections, we expect most households to have at least one person who has acheived at least 11.5 years of education. In this plot, we show the expected contribution this increase in educational attainment has on utilization patterns. Note that we hold all other covariates equal to isolate the contribution of improved educational attainment in this population.}",fig.lp='fig:'>>=
+   
+    # PLOT  
+  library(gridExtra)
+
+  grid.arrange(stbar(res=baseline, "Baseline:\nObserved distribution\n\n",s=3.2,titlesize=10), 
+                stbar(res=edu5, "2030:\nAll households have a \nmemberwith at least 11.5 \nyears of education",s=3.2,titlesize=10),
+                ncol=2)
+ 
+ 
+@
+
+
+Key Takeaways:
+
+\begin{itemize}
+\item We see a small incremental increase in total utilization (2\%).
+\item More education is associated with substitution of care away from public and toward private facilities, especially private hospitals.
+\end{itemize}
+
+
+\pagebreak
+
+
+<<pop_cf_setup3, include=FALSE>>=
+
+  # get model data (treated as xhyp)
+  d<-mnlf$modeldata
+  
+  # baseline
+  baseline=colMeans(predict(mnlf$model,newdata=d))
+  
+  # increment acces
+    d$hc_60m=1
+  baseline.hi.access=colMeans(predict(mnlf$model,newdata=d))
+  d<-mnlf$modeldata
+    d$urban=1
+  baseline.urban=colMeans(predict(mnlf$model,newdata=d))
+    d$urban=0
+  baseline.rural=colMeans(predict(mnlf$model,newdata=d))
+  
+  
+@
+
+
+<<accesplots, echo=FALSE, warning=FALSE, results='asis',fig.pos="H", fig.keep='all', fig.show='asis',capT="\\textit{These plots show how urbanization and improved physical access to facilities affect predicted utilization patterns. The first bar shows our baseline data. We then see how this distribution changes if all houeshold were in a rural or urban area. The final bar shows how increasing physical access (putting a facility within an hour of every household) affects utilization paterns.}",fig.lp='fig:'>>=
+   
+    # PLOT  
+  library(gridExtra)
+
+  grid.arrange(stbar(res=baseline, "Baseline:\nObserved distribution\nof access and\nurbanicity\n",s=3.2,titlesize=8), 
+               stbar(res=baseline.rural,"Rural:\nAll HHs in rural area\n\n\n",s=3.2,titlesize=8),
+               stbar(res=baseline.urban,"Urban:\nAll HHs in urban area\n\n\n",s=3.2,titlesize=8),
+               stbar(res=baseline.hi.access,"Hi Access:\nObserved distribution\nof urbanicity but\nall HHs within 1 hr\nof a facility",s=3.2,titlesize=8),
+                ncol=4)
+ 
+ 
+@
+
+
+Key Takeaways:
+
+\begin{itemize}
+\item Compared to rural households, urban households are less likely to visit a Public PHC and more likely to go to a public hospital, and slightly more likely to seek facility based care overall.
+\item Physical access alone does not seem to affect utilization much from baseline, even though only about 80\% of households reported living within an hour of a health facility.
+\end{itemize}
+
+\pagebreak
+
+
+
+

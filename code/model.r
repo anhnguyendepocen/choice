@@ -389,10 +389,10 @@ mnl.data.format <- function(dat=data,
       labs(x=NULL)+
       theme(line = element_blank())+
       geom_hline(yintercept=100, linetype = "longdash")+
-      geom_text(aes(label = pct, y = pos,x=1-(.4*.1)), hjust=0,size = s ,color='white',fontface='bold')+
-      geom_text(aes(label = name, y = pos,x=1-(.15*.1)), hjust=0,size = s,color='white',fontface='bold')+
-      geom_text(aes(label = paste0(z,"% No Care"), y = 98,x=1-(.4*.1)), 
-                hjust=0,size = s,color='black')
+      geom_text(aes(label = pct, y = pos,x=1-(.4*.1)), hjust=0,size = s ,color='white')+ #,fontface='bold')+
+      geom_text(aes(label = name, y = pos,x=1-(.12*.1)), hjust=0,size = s,color='white')+ #,fontface='bold')+
+      geom_text(aes(label = paste0(z,"% \nNo F.B. care"), y = 97,x=1-(.4*.1)), 
+                hjust=0,size = 2.8,color='black')
     
     
   }
